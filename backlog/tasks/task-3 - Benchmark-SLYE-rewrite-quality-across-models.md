@@ -5,11 +5,12 @@ status: In Progress
 assignee:
   - '@zambo'
 created_date: '2026-08-14 01:54'
-updated_date: '2026-08-14 02:37'
+updated_date: '2026-08-14 03:27'
 labels: []
 dependencies: []
 references:
   - backlog/docs/specs/doc-1 - SLYE-MVP-specification.md
+  - doc-3
 priority: medium
 type: spike
 ordinal: 3000
@@ -46,5 +47,7 @@ Build a reproducible evaluation of SLYE rewrite quality across several authentic
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-User approved the canonical model list and distinct-level fallback policy; a six-fixture all-English public corpus; the current production prompt baseline; sequential calls with a 45-second deadline and 8,192-token cap; public OpenRouter-equivalent pricing; no judge calls; blind human review; and strict isolation from agent, session, project, and tool context.
+User approval remains: the canonical model list and distinct-level fallback policy; a six-fixture all-English public corpus; the current production prompt baseline; sequential calls with a 45-second deadline and 8,192-token cap; public OpenRouter-equivalent pricing; no judge calls; blind human review; and strict isolation from agent, session, project, and tool context.
+
+Final pre-approval validation: manifest fingerprint `80d7d401fe9862d3d558efc4ba8b674014dd3e7e975f02d77cc3b37c30fbd759`; Budget with estimated input and maximum output: USD 1.59740162; Conservative maximum OpenRouter-equivalent cost: USD 1.63969394. `node --test test/benchmark.test.ts` passed (18 tests), `npm run check` passed (52 tests), and `npm run benchmark:dry-run` produced a deterministic 108-row manifest without runtime, network, or model/completion calls. No model/completion calls ran.
 <!-- SECTION:NOTES:END -->

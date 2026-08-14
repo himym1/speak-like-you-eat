@@ -20,7 +20,10 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --test",
-    "check": "npm run typecheck && npm test"
+    "check": "npm run typecheck && npm test",
+    "benchmark:dry-run": "node benchmark/cli.ts dry-run",
+    "benchmark:run": "node benchmark/cli.ts run",
+    "benchmark:report": "node benchmark/cli.ts report"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
