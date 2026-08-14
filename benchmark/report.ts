@@ -82,12 +82,13 @@ export async function writeBlindReport(
   results: readonly BenchmarkResult[],
   workDirectory: string,
   randomIndex: RandomIndex = randomInt,
+  corpus: readonly BenchmarkFixture[] = BENCHMARK_CORPUS,
 ): Promise<{ reportPath: string; mappingPath: string }> {
   await mkdir(workDirectory, { recursive: true });
   const candidates = [...new Set(results.map((result) => `${result.canonicalModel}#${result.requestedThinking}`))].sort();
   const mappingPath = join(workDirectory, "blind-map.json");
   const mapping = assignCandidateLabels(candidates, await readMapping(mappingPath), randomIndex);
-  const sections = BENCHMARK_CORPUS.flatMap((fixture) => {
+  const sections = corpus.flatMap((fixture) => {
     const fixtureResults = results.filter((result) => result.fixture === fixture.id);
     return fixtureResults.length === 0 ? [] : [formatFixture(fixture, fixtureResults, mapping)];
   });

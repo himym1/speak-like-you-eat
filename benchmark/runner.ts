@@ -13,6 +13,7 @@ import {
   type CompletionReasoning,
   type ManifestRow,
   type OpenRouterPrice,
+  type RewriteContextBuilder,
   writeManifest,
 } from "./manifest.ts";
 import { type ActualThinking, type ProviderThinking, type RequestedThinking } from "./matrix.ts";
@@ -62,9 +63,24 @@ export type BenchmarkResult = {
 
 export type RuntimeFactory = (cwd: string) => Promise<{ runtime: ModelRuntimeLike; dispose(): void }>;
 
+export type BenchmarkSuite = {
+  corpus: readonly BenchmarkFixture[];
+  buildContext: RewriteContextBuilder;
+  buildManifest(): Promise<BenchmarkManifest>;
+  writeManifest(manifest: BenchmarkManifest): Promise<void>;
+};
+
+export const PHASE_ONE_SUITE: BenchmarkSuite = {
+  corpus: BENCHMARK_CORPUS,
+  buildContext: buildRewriteContext,
+  buildManifest,
+  writeManifest,
+};
+
 export type RunBenchmarkOptions = {
   workDirectory: string;
   runtimeFactory?: RuntimeFactory;
+  suite?: BenchmarkSuite;
 };
 
 export async function runBenchmark(approval: string | undefined, options: RunBenchmarkOptions): Promise<{
@@ -72,9 +88,10 @@ export async function runBenchmark(approval: string | undefined, options: RunBen
   results: BenchmarkResult[];
   stopped: boolean;
 }> {
+  const suite = options.suite ?? PHASE_ONE_SUITE;
   const runtimeFactory = options.runtimeFactory ?? createIsolatedRuntime;
-  const manifest = await buildManifest();
-  await writeManifest(manifest);
+  const manifest = await suite.buildManifest();
+  await suite.writeManifest(manifest);
   if (approval !== manifest.fingerprint) {
     throw new Error("Refusing to create a Pi runtime: pass --approve with the current manifest fingerprint.");
   }
@@ -108,8 +125,8 @@ export async function runBenchmark(approval: string | undefined, options: RunBen
         continue;
       }
 
-      const fixture = findFixture(row.fixture);
-      const result = await executeRow(row, fixture, runtimeHandle.runtime, interrupt.signal, price);
+      const fixture = findFixture(suite.corpus, row.fixture);
+      const result = await executeRow(row, fixture, runtimeHandle.runtime, interrupt.signal, price, suite.buildContext);
       await writeResult(options.workDirectory, result);
       results.push(result);
       if (shouldStopAfterResult(result)) {
@@ -131,6 +148,7 @@ export async function executeRow(
   runtime: ModelRuntimeLike,
   externalSignal?: AbortSignal,
   price?: OpenRouterPrice,
+  buildContext: RewriteContextBuilder = buildRewriteContext,
 ): Promise<BenchmarkResult> {
   if (externalSignal?.aborted) {
     return baseResult(row, 0, "cancelled", null);
@@ -146,7 +164,7 @@ export async function executeRow(
   const options = completionOptions(row, controller.signal);
   let completion: Promise<CompletionResponse>;
   try {
-    completion = runtime.completeSimple(model, buildRewriteContext(fixture.request), options) as Promise<CompletionResponse>;
+    completion = runtime.completeSimple(model, buildContext(fixture.request), options) as Promise<CompletionResponse>;
   } catch (error) {
     return { ...baseResult(row, Date.now() - startedAt, "error", null), errorCategory: sanitizeError(error) };
   }
@@ -377,8 +395,8 @@ function workPath(workDirectory: string, callId: string): string {
   return join(workDirectory, `${callId}.json`);
 }
 
-function findFixture(id: string): BenchmarkFixture {
-  const fixture = BENCHMARK_CORPUS.find((entry) => entry.id === id);
+function findFixture(corpus: readonly BenchmarkFixture[], id: string): BenchmarkFixture {
+  const fixture = corpus.find((entry) => entry.id === id);
   if (fixture === undefined) throw new Error(`Unknown fixture: ${id}`);
   return fixture;
 }

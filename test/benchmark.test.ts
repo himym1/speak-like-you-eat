@@ -2,11 +2,24 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { buildRewriteContext } from "../src/model-rewrite.ts";
 import { BENCHMARK_CORPUS, verifyCorpusInvariants } from "../benchmark/corpus.ts";
 import { buildManifest, calculateOpenRouterCost, callIdFor, OUTPUT_TOKEN_CEILING, type CallIdentity, writeManifest } from "../benchmark/manifest.ts";
 import { BENCHMARK_CANDIDATES, validateCandidateMatrix } from "../benchmark/matrix.ts";
+import {
+  buildPhaseTwoContext,
+  buildPhaseTwoManifest,
+  PHASE_ONE_BASELINE_FINGERPRINT,
+  PHASE_TWO_CANDIDATE_IDS,
+  PHASE_TWO_CANDIDATES,
+  PHASE_TWO_FIXTURE_IDS,
+  PHASE_TWO_FIXTURES,
+  PHASE_TWO_PROMPT_VARIANT_ID,
+  PHASE_TWO_SUITE,
+  phaseTwoSystemPrompt,
+} from "../benchmark/phase-2.ts";
 import { assignCandidateLabels, evaluateMechanicalChecks, readLocalResults, writeBlindReport } from "../benchmark/report.ts";
 import {
   completionOptions,
@@ -17,13 +30,21 @@ import {
   sanitizeError,
   shouldStopAfterResult,
   validateRuntimeSupport,
+  PHASE_ONE_SUITE,
   type BenchmarkResult,
+  type BenchmarkSuite,
 } from "../benchmark/runner.ts";
-
-const manifestTestPath = new URL("../benchmark/manifest.test.json", import.meta.url);
 
 async function createTestWorkDirectory(): Promise<string> {
   return mkdtemp(join(tmpdir(), "slye-benchmark-test-"));
+}
+
+function suiteWithTemporaryManifest(suite: BenchmarkSuite, directory: string): BenchmarkSuite {
+  const manifestUrl = pathToFileURL(join(directory, "manifest.json"));
+  return {
+    ...suite,
+    writeManifest: (manifest) => writeManifest(manifest, manifestUrl),
+  };
 }
 
 function configuredRuntime(options: { authenticated?: boolean; nullXhigh?: boolean; wrongMax?: boolean; providerDefaults?: boolean } = {}) {
@@ -44,7 +65,7 @@ function configuredRuntime(options: { authenticated?: boolean; nullXhigh?: boole
         thinkingLevelMap: options.providerDefaults ? { max: "max" } : { off: "omitted", high: "high", max: options.wrongMax ? "high" : "max" },
       };
     },
-    completeSimple: async () => ({ stopReason: "stop", content: [{ type: "text", text: "fake final" }] }),
+    completeSimple: async (_model: unknown, _context: unknown) => ({ stopReason: "stop", content: [{ type: "text", text: "fake final" }] }),
   };
 }
 
@@ -118,6 +139,54 @@ test("deterministic manifest contains 108 isolated payload rows, explicit semant
   assert.ok(manifest.rows.every((row) => row.completionMethod === "completeSimple" && row.cacheRetention === "none"));
 });
 
+test("phase two pins its subset, prompt, metadata, call identities, and budgets", async () => {
+  const productionPrompt = buildRewriteContext(BENCHMARK_CORPUS[0]!.request).systemPrompt;
+  const phaseTwoPrompt = phaseTwoSystemPrompt();
+  const finalOutputInstruction = "Output only the rewrite, with no label, preamble, or commentary.";
+  assert.equal(
+    phaseTwoPrompt,
+    [
+      productionPrompt.slice(0, productionPrompt.lastIndexOf("\n")),
+      "Replace clichés, stock metaphors, corporate jargon, slogans, filler, and repetition with their plain meaning; do not preserve or lightly paraphrase them.",
+      "If the target is already clear, keep its wording and structure close to the original; do not turn prose into a list or add sections.",
+      "Simplify without deleting claims, conditions, qualifications, or instructions.",
+      finalOutputInstruction,
+    ].join("\n"),
+  );
+  assert.equal(phaseTwoPrompt.endsWith(finalOutputInstruction), true);
+  assert.deepEqual(PHASE_TWO_FIXTURES.map((fixture) => fixture.id), PHASE_TWO_FIXTURE_IDS);
+  assert.deepEqual(PHASE_TWO_CANDIDATES.map((candidate) => candidate.id), PHASE_TWO_CANDIDATE_IDS);
+
+  const request = BENCHMARK_CORPUS[0]!.request;
+  const productionContext = buildRewriteContext(request);
+  const phaseTwoContext = buildPhaseTwoContext(request);
+  assert.deepEqual(phaseTwoContext.messages, productionContext.messages);
+  assert.equal(phaseTwoContext.systemPrompt, phaseTwoPrompt);
+
+  const [phaseOneManifest, manifest] = await Promise.all([buildManifest(), buildPhaseTwoManifest()]);
+  assert.equal(manifest.callCount, 9);
+  assert.equal(manifest.rows.length, 9);
+  assert.equal(manifest.fingerprint, "59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728");
+  assert.equal(manifest.pricing.estimatedInputAtOutputCeilingCost, "0.15991218");
+  assert.equal(manifest.pricing.conservativeMaximumCost, "0.16476768");
+  assert.deepEqual(manifest.suite, {
+    id: "phase-2",
+    promptVariantId: PHASE_TWO_PROMPT_VARIANT_ID,
+    systemPrompt: phaseTwoPrompt,
+    phaseOneBaselineFingerprint: PHASE_ONE_BASELINE_FINGERPRINT,
+    fixtureIds: PHASE_TWO_FIXTURE_IDS,
+    candidateIds: PHASE_TWO_CANDIDATE_IDS,
+  });
+  assert.deepEqual(
+    manifest.rows.map((row) => `${row.fixture}:${row.canonicalModel}#${row.requestedThinking}`),
+    PHASE_TWO_FIXTURE_IDS.flatMap((fixture) => PHASE_TWO_CANDIDATE_IDS.map((candidate) => `${fixture}:${candidate}`)),
+  );
+  assert.equal(new Set(manifest.rows.map((row) => row.callId)).size, 9);
+  assert.equal(manifest.rows.some((row) => phaseOneManifest.rows.some((phaseOneRow) => phaseOneRow.callId === row.callId)), false);
+  assert.ok(manifest.rows.every((row) => row.completionMethod === "completeSimple" && row.cacheRetention === "none"));
+  assert.ok(manifest.rows.every((row) => row.requestMaxTokens === 8_192 && row.outputTokenCeiling === 8_192 && row.deadlineMs === 45_000));
+});
+
 test("call identity includes every execution-relevant row field", async () => {
   const row = (await buildManifest()).rows[0]!;
   const identity = {
@@ -160,14 +229,16 @@ test("call identity includes every execution-relevant row field", async () => {
   }
 });
 
-test("manifest JSON is deterministic, pretty, and fingerprinted from canonical JSON", async () => {
+test("manifest JSON is deterministic, pretty, and fingerprinted from canonical JSON", async (t) => {
+  const directory = await createTestWorkDirectory();
+  const manifestUrl = pathToFileURL(join(directory, "manifest.json"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
   const manifest = await buildManifest();
-  await writeManifest(manifest, manifestTestPath);
-  const first = await readFile(manifestTestPath, "utf8");
-  await writeManifest(manifest, manifestTestPath);
-  assert.equal(await readFile(manifestTestPath, "utf8"), first);
+  await writeManifest(manifest, manifestUrl);
+  const first = await readFile(manifestUrl, "utf8");
+  await writeManifest(manifest, manifestUrl);
+  assert.equal(await readFile(manifestUrl, "utf8"), first);
   assert.match(first, /^\{\n  "callCount": 108,/);
-  await rm(manifestTestPath, { force: true });
 });
 
 test("benchmark payload is the exact isolated production Context", async () => {
@@ -248,6 +319,7 @@ test("approval rejection happens before the runtime factory and dry-run data has
   await assert.rejects(
     runBenchmark("wrong", {
       workDirectory,
+      suite: suiteWithTemporaryManifest(PHASE_ONE_SUITE, workDirectory),
       runtimeFactory: async () => {
         factoryCalls += 1;
         throw new Error("must not run");
@@ -273,13 +345,14 @@ test("test-supplied storage contains run, resume, and report artifacts", async (
     };
   };
   const runtimeFactory = async () => ({ runtime: runtime as never, dispose: () => {} });
-  const first = await runBenchmark(manifest.fingerprint, { workDirectory, runtimeFactory });
+  const suite = suiteWithTemporaryManifest(PHASE_ONE_SUITE, workDirectory);
+  const first = await runBenchmark(manifest.fingerprint, { workDirectory, runtimeFactory, suite });
   assert.equal(first.stopped, false);
   assert.equal(completions, 108);
   const resultPath = join(workDirectory, `${manifest.rows[0]!.callId}.json`);
   const stored = JSON.parse(await readFile(resultPath, "utf8")) as BenchmarkResult;
   await writeFile(resultPath, `${JSON.stringify({ ...stored, openRouterEquivalentCost: "999" })}\n`);
-  const second = await runBenchmark(manifest.fingerprint, { workDirectory, runtimeFactory });
+  const second = await runBenchmark(manifest.fingerprint, { workDirectory, runtimeFactory, suite });
   assert.equal(second.results.length, 108);
   assert.equal(completions, 108);
   assert.notEqual(second.results[0]?.openRouterEquivalentCost, "999");
@@ -287,6 +360,46 @@ test("test-supplied storage contains run, resume, and report artifacts", async (
   const report = await writeBlindReport(results, workDirectory, () => 0);
   assert.equal(report.reportPath, join(workDirectory, "blind-review.md"));
   assert.equal(report.mappingPath, join(workDirectory, "blind-map.json"));
+});
+
+test("phase-two execution uses its isolated payload, approves before runtime, and resumes nine calls", async (t) => {
+  const workDirectory = await createTestWorkDirectory();
+  t.after(() => rm(workDirectory, { recursive: true, force: true }));
+  const manifest = await buildPhaseTwoManifest();
+  let factoryCalls = 0;
+  await assert.rejects(
+    runBenchmark("wrong", {
+      workDirectory,
+      suite: suiteWithTemporaryManifest(PHASE_TWO_SUITE, workDirectory),
+      runtimeFactory: async () => {
+        factoryCalls += 1;
+        throw new Error("must not run");
+      },
+    }),
+    /Refusing to create a Pi runtime/,
+  );
+  assert.equal(factoryCalls, 0);
+
+  let completions = 0;
+  let seenContext: unknown;
+  const runtime = configuredRuntime();
+  runtime.completeSimple = async (_model: unknown, context: unknown) => {
+    completions += 1;
+    seenContext = context;
+    return { stopReason: "stop", content: [{ type: "text", text: "fake final" }] };
+  };
+  const suite = suiteWithTemporaryManifest(PHASE_TWO_SUITE, workDirectory);
+  const runtimeFactory = async () => ({ runtime: runtime as never, dispose: () => {} });
+  const first = await runBenchmark(manifest.fingerprint, { workDirectory, runtimeFactory, suite });
+  assert.equal(first.stopped, false);
+  assert.equal(first.results.length, 9);
+  assert.equal(completions, 9);
+  assert.deepEqual(seenContext, buildPhaseTwoContext(PHASE_TWO_FIXTURES[2]!.request));
+
+  const second = await runBenchmark(manifest.fingerprint, { workDirectory, runtimeFactory, suite });
+  assert.equal(second.stopped, false);
+  assert.equal(second.results.length, 9);
+  assert.equal(completions, 9);
 });
 
 test("a saved timeout is settled, skipped, and lets the next resume finish", async (t) => {
@@ -308,6 +421,7 @@ test("a saved timeout is settled, skipped, and lets the next resume finish", asy
   };
   const resumed = await runBenchmark(manifest.fingerprint, {
     workDirectory,
+    suite: suiteWithTemporaryManifest(PHASE_ONE_SUITE, workDirectory),
     runtimeFactory: async () => ({ runtime: runtime as never, dispose: () => {} }),
   });
   assert.equal(resumed.stopped, false);
@@ -430,6 +544,18 @@ test("blind reports group fixtures, keep a random stable local mapping, and hide
   assert.equal(text.includes("secret/provider"), false);
   assert.equal(text.includes("requestedThinking"), false);
   assert.equal(text.includes("actualPiThinking"), false);
+});
+
+test("phase-two blind reports use only the phase-two corpus", async (t) => {
+  const workDirectory = await createTestWorkDirectory();
+  t.after(() => rm(workDirectory, { recursive: true, force: true }));
+  const results = PHASE_TWO_FIXTURES.map((fixture) => resultFor(fixture.id));
+  const report = await writeBlindReport(results, workDirectory, () => 0, PHASE_TWO_FIXTURES);
+  const text = await readFile(report.reportPath, "utf8");
+  for (const fixture of PHASE_TWO_FIXTURES) {
+    assert.match(text, new RegExp(fixture.source));
+  }
+  assert.equal(text.includes(BENCHMARK_CORPUS.find((fixture) => fixture.id === "technical-literals")!.source), false);
 });
 
 test("local result loading ignores stale call IDs before parsing or reporting", async (t) => {

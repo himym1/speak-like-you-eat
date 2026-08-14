@@ -23,7 +23,10 @@
     "check": "npm run typecheck && npm test",
     "benchmark:dry-run": "node benchmark/cli.ts dry-run",
     "benchmark:run": "node benchmark/cli.ts run",
-    "benchmark:report": "node benchmark/cli.ts report"
+    "benchmark:report": "node benchmark/cli.ts report",
+    "benchmark:phase-2:dry-run": "node benchmark/cli.ts phase-2-dry-run",
+    "benchmark:phase-2:run": "node benchmark/cli.ts phase-2-run",
+    "benchmark:phase-2:report": "node benchmark/cli.ts phase-2-report"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",

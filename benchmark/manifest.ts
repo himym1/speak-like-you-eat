@@ -2,7 +2,8 @@ import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { buildRewriteContext } from "../src/model-rewrite.ts";
-import { BENCHMARK_CORPUS, verifyCorpusInvariants } from "./corpus.ts";
+import type { RewriteRequest } from "../src/rewrite.ts";
+import { BENCHMARK_CORPUS, type BenchmarkFixture, verifyCorpusInvariants } from "./corpus.ts";
 import {
   BENCHMARK_CANDIDATES,
   validateCandidateMatrix,
@@ -63,6 +64,15 @@ export type ManifestRow = CompletionPlan & {
   priceModel: string;
 };
 
+export type BenchmarkSuiteMetadata = {
+  id: string;
+  promptVariantId: string;
+  systemPrompt: string;
+  phaseOneBaselineFingerprint: string;
+  fixtureIds: readonly string[];
+  candidateIds: readonly string[];
+};
+
 export type BenchmarkManifest = {
   version: 1;
   callCount: number;
@@ -85,6 +95,7 @@ export type BenchmarkManifest = {
     conservativeMaximumCost: string;
   };
   fingerprint: string;
+  suite?: BenchmarkSuiteMetadata;
 };
 
 export type CallIdentity = Pick<
@@ -106,6 +117,15 @@ export type CallIdentity = Pick<
   | "deadlineMs"
   | "priceModel"
 >;
+
+export type RewriteContextBuilder = (request: RewriteRequest) => ReturnType<typeof buildRewriteContext>;
+
+export type BuildManifestForOptions = {
+  fixtures: readonly BenchmarkFixture[];
+  candidates: readonly BenchmarkCandidate[];
+  buildContext: RewriteContextBuilder;
+  suiteMetadata?: BenchmarkSuiteMetadata;
+};
 
 export function completionPlanFor(candidate: BenchmarkCandidate): CompletionPlan {
   if (candidate.actualThinking === "off") {
@@ -138,10 +158,18 @@ export function completionPlanFor(candidate: BenchmarkCandidate): CompletionPlan
 }
 
 export async function buildManifest(): Promise<BenchmarkManifest> {
+  return buildManifestFor({
+    fixtures: BENCHMARK_CORPUS,
+    candidates: BENCHMARK_CANDIDATES,
+    buildContext: buildRewriteContext,
+  });
+}
+
+export async function buildManifestFor(options: BuildManifestForOptions): Promise<BenchmarkManifest> {
   verifyCorpusInvariants();
   validateCandidateMatrix();
   const prices = await loadPrices();
-  const rows = buildRows(BENCHMARK_CANDIDATES);
+  const rows = buildRows(options.fixtures, options.candidates, options.buildContext);
   const summaries = buildSummaries(rows);
   const pricing = buildPricing(rows, prices);
   const withoutFingerprint = {
@@ -152,6 +180,8 @@ export async function buildManifest(): Promise<BenchmarkManifest> {
     rows,
     summaries,
     pricing,
+    // Phase-one byte stability requires `suite` to be absent, not null or undefined.
+    ...(options.suiteMetadata === undefined ? {} : { suite: options.suiteMetadata }),
   };
 
   return {
@@ -194,10 +224,14 @@ export function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function buildRows(candidates: readonly BenchmarkCandidate[]): ManifestRow[] {
+function buildRows(
+  fixtures: readonly BenchmarkFixture[],
+  candidates: readonly BenchmarkCandidate[],
+  buildContext: RewriteContextBuilder,
+): ManifestRow[] {
   const rows: ManifestRow[] = [];
-  for (const fixture of BENCHMARK_CORPUS) {
-    const payload = buildRewriteContext(fixture.request);
+  for (const fixture of fixtures) {
+    const payload = buildContext(fixture.request);
     const payloadText = stableJson(payload);
     const payloadSha256 = sha256(payloadText);
     const contextBytes = Buffer.byteLength(payloadText, "utf8");

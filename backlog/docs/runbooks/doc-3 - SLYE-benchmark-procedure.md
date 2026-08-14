@@ -3,7 +3,7 @@ id: doc-3
 title: SLYE benchmark procedure
 type: guide
 created_date: '2026-08-14 02:50'
-updated_date: '2026-08-14 03:27'
+updated_date: '2026-08-14 14:36'
 ---
 # SLYE benchmark procedure
 
@@ -54,3 +54,33 @@ The report rebuilds the current manifest and loads only local result filenames w
 The report is grouped by corpus fixture in corpus order. Each fixture shows its selected context and exact source target once, then its outputs in anonymized Candidate-label order with elapsed time, available token usage, OpenRouter-equivalent cost, and mechanical checks. It contains no model, provider, or thinking identity. Source and output are isolated in fences so model Markdown cannot change report structure.
 
 Review the anonymized outputs against the rubric: simplification, cliché removal, semantic and factual fidelity, English fidelity, Markdown/code preservation, and unwanted preambles. Mechanical checks are evidence only; they do not prove semantic quality. Keep the mapping hidden until all human scoring is complete. Then reveal `benchmark/.work/blind-map.json`, summarize the evidence and recommendations, and publish only the reviewed aggregate findings. Any prompt change or follow-up benchmark needs separate approval and budget review.
+
+## Phase-two prompt follow-up
+
+Phase one completed 108/108 calls and a locked blind human review. It showed that the backup-cliché, inflated-prose, and clear-control fixtures carried most quality differentiation; code, Markdown, literal, and injection fixtures mainly validated safety. Phase two therefore compares one evidence-based prompt variant only on those three fixtures and only with Terra off, GPT-OSS 120B low, and DeepSeek V4 off. Existing phase-one outputs remain the baseline and are not called again.
+
+The phase-two prompt keeps the complete production prompt, inserts three exact evidence-based instructions immediately before the final output-only instruction, and changes no production runtime behavior. `benchmark/phase-2-manifest.json` fingerprints the complete prompt, variant ID, phase-one baseline fingerprint, ordered fixture IDs, ordered candidate IDs, isolated payload hashes, completion options, price snapshot, and budgets.
+
+The setup approval does not approve model calls. Review the no-call manifest with:
+
+```sh
+npm run benchmark:phase-2:dry-run
+```
+
+Confirm the output prints prompt variant `phase-2-evidence-based-plainness-v1`, the complete prompt, exactly nine rows, fingerprint `59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728`, estimated-input/output-ceiling budget USD 0.15991218, and conservative maximum OpenRouter-equivalent budget USD 0.16476768. A changed prompt, subset, payload, option, price, or limit changes the fingerprint. Do not execute phase two until the responsible person explicitly approves that exact fingerprint and conservative budget.
+
+Only after that approval, run:
+
+```sh
+npm run benchmark:phase-2:run -- --approve <fingerprint>
+```
+
+Phase two uses the same preflight, sequential execution, deadline, output ceiling, sanitized persistence, settlement, resume, and stop rules as phase one. Its ignored results are isolated under `benchmark/.work/phase-2/`; phase-one results and blind mapping remain untouched.
+
+After all nine rows settle, create the separate blind report with:
+
+```sh
+npm run benchmark:phase-2:report
+```
+
+Review and lock the nine quality scores before revealing `benchmark/.work/phase-2/blind-map.json`. Compare the reviewed results against the matching phase-one baseline rows. As of 2026-08-14, the phase-two setup and dry-run exist, but no phase-two model call has run.
