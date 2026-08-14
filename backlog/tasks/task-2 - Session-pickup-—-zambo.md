@@ -5,7 +5,7 @@ status: To Do
 assignee:
   - '@zambo'
 created_date: '2026-08-13 23:04'
-updated_date: '2026-08-14 14:54'
+updated_date: '2026-08-14 15:37'
 labels:
   - continuity
   - handoff
@@ -19,18 +19,17 @@ ordinal: 2000
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
 WHERE WE LEFT OFF
-2026-08-14. Branch `main`; latest durable commits are `2a46199` (record phase-two execution), `ae3afeb` (declare TypeScript no-emit project), and `4759596` (track TASK-4), followed by the commit containing this pickup snapshot. No Git remote is configured, so nothing is pushed. The tracked tree is clean. Approved phase-two fingerprint `59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728` completed 9/9 rows with normal stop, 2,784 input tokens, 702 output tokens, 3,486 total tokens, zero reasoning tokens, 24,112 ms summed latency, 1,701 ms median latency, 8,766 ms maximum latency, and USD 0.00041840 usage-based OpenRouter-equivalent cost. Local ignored artifacts are under `benchmark/.work/phase-2/`; `blind-review-scored.md` has nine empty Q/F/S placeholders and `blind-map.json` remains hidden from the human. The reported TypeScript editor error was fixed by adding `noEmit: true` to `tsconfig.json`, matching `allowImportingTsExtensions` and the existing no-emission workflow; `npm run typecheck` passes. TASK-4 tracks the requested automatic formatter, linter, type checker, tests, and pre-commit hooks. Research recommends Biome 2.5.8 plus existing `tsc` plus Lefthook 2.1.10, with Markdown and ignored benchmark results excluded; implementation has not started and awaits stack confirmation.
+2026-08-14. Branch `main`; tooling commit `b1fa73d` (`chore: automate pre-commit quality checks`) and phase-two comparison record `4d4ef71` (`chore: record phase two prompt comparison`), followed by the commit containing this pickup snapshot. No Git remote is configured, so nothing is pushed. The tracked tree is clean. TASK-4 is Done: Biome 2.5.8 formats/lints 24 explicitly scoped TypeScript/JSON files, `tsc` uses tsconfig `noEmit`, Lefthook 2.1.10 auto-installs and runs staged Biome safe fixes/re-stage → typecheck → 55 Node tests, docs-only commits pass, real failures block, and partial unstaged hunks remain unstaged. The eight-file npm package and canonical benchmark manifests remain unchanged. Phase-two blind scores were locked before reveal at SHA-256 `87381478f7a4fefb409b75bf720b599dda31328dcdf43a8e79c9f8a58e85e585`. On the three matched fixtures, Terra off mean Q changed 1.667→2.000, GPT-OSS 120B low 1.667→1.500, and DeepSeek V4 off 1.333→1.500; every F and S remained 2. Across all nine rows, mean Q changed 1.556→1.667. Terra alone fully fixed backup-cliche. TASK-3 records the comparison; no further call ran.
 
 WHAT'S NEXT
-1. Have zambo score `benchmark/.work/phase-2/blind-review-scored.md` without opening `benchmark/.work/phase-2/blind-map.json`.
-2. Confirm or revise the proposed TASK-4 stack: Biome for formatting/linting, `tsc` for type checking, and Lefthook for automatic pre-commit installation; recommended hook order is staged Biome auto-fix/re-stage, then full typecheck and the currently fast Node tests.
-3. After stack approval, activate TASK-4, record the plan, implement one reviewed tooling slice, explicitly exclude Markdown and `benchmark/.work/`, preserve the eight-file package, and document manual/hook commands and bypass recovery.
-4. After phase-two scores are locked, reveal the phase-two mapping, compare against matching phase-one rows, and decide whether to promote the improved prompt into production.
-5. Finish TASK-3 recommendations/finalization, then TASK-1 docs/final reviews and MVP closure.
+1. Obtain zambo's product decision on promoting the evidence-based prompt variant into production. Recommendation: promote it because aggregate Q improved and no fidelity/safety score regressed, while documenting that the quality effect was model-dependent.
+2. If approved, add the exact three tested instructions to the production system prompt immediately before output-only, add focused tests that prove exact prompt order and unchanged isolated payload, run the integrated hook/checks, and manually verify one real sandbox rewrite without expanding the benchmark matrix.
+3. Publish final model guidance: quality-first Terra off; fast/value option GPT-OSS 120B low under the baseline prompt but phase-two regression noted; fast baseline DeepSeek off; avoid higher thinking because it did not reliably help.
+4. Finalize TASK-3 with aggregate evidence and any production prompt decision, then complete TASK-1 acceptance checks, docs-reviewer, final-reviewer, and MVP closure.
 
 WAITING ON / GATED BY
-As of 2026-08-14, phase-two conclusions are gated by zambo's nine blind scores. TASK-4 implementation is gated by confirmation of Biome + `tsc` + Lefthook and whether the pre-commit hook should include the ~1.3-second Node test suite; the recommendation is yes. No further model call is approved or needed.
+As of 2026-08-14, TASK-3 and TASK-1 are gated by zambo's decision to promote or reject the tested prompt variant. Zambo also mentioned a forgotten side note; no work is inferred until it is remembered. No further benchmark/model call is approved or needed.
 
 VERIFY
-Run `git status -sb`; `git log --oneline -6`; `npm run typecheck`; `find benchmark/.work/phase-2 -maxdepth 1 -type f -name '*.json' ! -name 'blind-map.json' | wc -l` (expect 9); `rg -c '^> \*\*HUMAN:\*\*' benchmark/.work/phase-2/blind-review-scored.md` (expect 9); and `rg -c 'Q=\?|F=\?|S=\?' benchmark/.work/phase-2/blind-review-scored.md` (expect unfilled scores until the human review).
+Run `git status -sb`; `git log --oneline -6`; `npm run check`; `npx --no-install lefthook check-install`; `backlog task view TASK-4 --plain`; `backlog task view TASK-3 --plain`; and inspect `benchmark/.work/phase-2/human-comparison.json` against locked score hash `87381478f7a4fefb409b75bf720b599dda31328dcdf43a8e79c9f8a58e85e585`.
 <!-- SECTION:DESCRIPTION:END -->
