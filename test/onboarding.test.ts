@@ -38,6 +38,9 @@ function createExtension(): {
     registerCommand(_name: string, registered: RegisteredCommand) {
       command = registered;
     },
+    registerEntryRenderer() {
+      // The display renderer is exercised in display.test.ts.
+    },
   } as unknown as ExtensionAPI;
 
   speakLikeYouEat(api);

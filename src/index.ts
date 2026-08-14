@@ -1,10 +1,12 @@
 import {
   CONFIG_DIR_NAME,
   getAgentDir,
+  getMarkdownTheme,
   type ExtensionAPI,
   type ExtensionCommandContext,
   type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import { Box, Markdown, Text } from "@earendil-works/pi-tui";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import {
@@ -16,10 +18,13 @@ import {
   type ModelReference,
   type SlyeConfig,
 } from "./config.ts";
+import { prepareRewriteRequest, type RewriteRequest } from "./rewrite.ts";
 
 const USAGE = "Usage: /slye model|on|off";
 const MODEL_SCOPE_ALL = "All projects";
 const MODEL_SCOPE_PROJECT = "This project only";
+const REWRITE_ENTRY_TYPE = "slye.rewrite";
+const REWRITE_HEADING = "🤌 Speak like you eat:";
 
 type SlyePaths = {
   global: string;
@@ -27,6 +32,7 @@ type SlyePaths = {
 };
 
 type PiModel = ReturnType<ExtensionContext["modelRegistry"]["getAvailable"]>[number];
+type RewriteEntryData = { display: string };
 
 export type ModelCandidate = {
   provider: string;
@@ -70,6 +76,20 @@ export function selectModelCandidates(
 
 export default function speakLikeYouEat(pi: ExtensionAPI): void {
   let hasShownStartupWarning = false;
+  let hasShownProcessingWarning = false;
+  const appendedTargetEntryIds = new Set<string>();
+
+  pi.registerEntryRenderer<RewriteEntryData>(REWRITE_ENTRY_TYPE, (entry, _options, theme) => {
+    const data = parseRewriteEntryData(entry.data);
+    if (data === undefined) {
+      return undefined;
+    }
+
+    const box = new Box(1, 1, (text) => theme.bg("customMessageBg", text));
+    box.addChild(new Text(theme.bold(REWRITE_HEADING), 0, 0));
+    box.addChild(new Markdown(data.display, 0, 1, getMarkdownTheme()));
+    return box;
+  });
 
   pi.on("session_start", async (_event, ctx) => {
     if (ctx.mode !== "tui") {
@@ -90,6 +110,39 @@ export default function speakLikeYouEat(pi: ExtensionAPI): void {
     }
     if (!hasUsableModel(ctx, effectiveConfig.config.model)) {
       notifyStartupWarning(ctx, "SLYE's selected model is unavailable. Run /slye model.");
+    }
+  });
+
+  pi.on("agent_end", async (event, ctx) => {
+    if (ctx.mode !== "tui") {
+      return;
+    }
+    if (process.env.SLYE_STUB !== "1") {
+      return;
+    }
+
+    try {
+      const effectiveConfig = await loadConfig(ctx);
+      if (effectiveConfig.kind !== "valid" || !effectiveConfig.config.enabled) {
+        return;
+      }
+      if (!hasUsableModel(ctx, effectiveConfig.config.model)) {
+        return;
+      }
+
+      const prepared = prepareRewriteRequest(event.messages, ctx.sessionManager.getBranch());
+      if (prepared === undefined || appendedTargetEntryIds.has(prepared.entryId)) {
+        return;
+      }
+
+      const display = createDevelopmentStub(prepared.request);
+      pi.appendEntry<RewriteEntryData>(REWRITE_ENTRY_TYPE, { display });
+      appendedTargetEntryIds.add(prepared.entryId);
+    } catch {
+      if (!hasShownProcessingWarning) {
+        hasShownProcessingWarning = true;
+        ctx.ui.notify("SLYE could not prepare the development rewrite.", "warning");
+      }
     }
   });
 
@@ -273,6 +326,21 @@ async function saveEnabledConfig(
   }
 
   ctx.ui.notify(`SLYE enabled with ${formatModel(model)} for ${scope}.`, "info");
+}
+
+function createDevelopmentStub(request: RewriteRequest): string {
+  return `Development stub — no secondary model called.\n\n${request.target}`;
+}
+
+function parseRewriteEntryData(data: unknown): RewriteEntryData | undefined {
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    return undefined;
+  }
+  if (!("display" in data) || typeof data.display !== "string") {
+    return undefined;
+  }
+
+  return { display: data.display };
 }
 
 async function loadConfig(ctx: ExtensionContext): Promise<EffectiveConfig> {

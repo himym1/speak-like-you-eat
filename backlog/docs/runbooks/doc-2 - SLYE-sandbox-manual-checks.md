@@ -3,7 +3,7 @@ id: doc-2
 title: SLYE sandbox manual checks
 type: guide
 created_date: '2026-08-13 23:14'
-updated_date: '2026-08-14 00:13'
+updated_date: '2026-08-14 00:56'
 ---
 # SLYE sandbox manual checks
 
@@ -69,6 +69,22 @@ Do not submit a prompt or make a model request:
 3. Exit Pi and verify `.pi/slye.json` contains the selected `provider` and `id` with `"enabled": true`.
 4. Start Pi again, run `/slye off`, and verify `.pi/slye.json` now has `"enabled": false` while retaining the model.
 5. Run `/slye on`, confirm it restores the saved model without opening a picker, then exit. Do not submit a prompt or make a model request at any point.
+
+### Slice 3 — display stub
+
+Use the existing sandbox project `.pi/slye.json` created during the slice-2 check; do not edit or delete it. From the sandbox, run:
+
+```sh
+cd ../speak_like_you_eat_sandbox
+SLYE_STUB=1 pi --approve
+```
+
+1. Submit one prompt expected to produce a normally completed final answer with more than 200 prose characters.
+2. Verify the original answer remains visible and exactly one `🤌 Speak like you eat:` card appears after it.
+3. Verify the card begins with `Development stub — no secondary model called.` and repeats the complete target response.
+4. Exit, then resume or reopen the same session. Verify the card still renders and that resume alone appends no duplicate card.
+
+This makes one primary-model request and no secondary-model request.
 
 ### Later slices
 

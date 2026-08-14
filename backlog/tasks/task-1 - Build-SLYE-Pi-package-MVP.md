@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@zambo'
 created_date: '2026-08-13 23:04'
-updated_date: '2026-08-14 00:13'
+updated_date: '2026-08-14 00:57'
 labels: []
 dependencies: []
 references:
@@ -63,4 +63,8 @@ Manual slice-1 gate passed on 2026-08-13: from the sibling sandbox, Pi started s
 Slice 2 configuration/onboarding implementation is ready for manual verification: typed slye.json validation and atomic persistence, trusted local-over-global precedence, TUI-only startup warning, and /slye model|on|off are covered by 11 Node tests. Automated checks passed on 2026-08-14; the sandbox manual configuration gate in doc-2 remains pending. No transcript, display, rewrite, model-completion, timeout, or cancellation behavior was added.
 
 Slice 2 review-required branch coverage was added for invalid effective files, trusted project precedence, startup variants, and global override confirmation.
+
+Manual slice-2 gate passed on 2026-08-14 in the sibling sandbox: startup warning, authenticated model picker, project-local `slye.json`, `/slye off`, and `/slye on` all behaved as specified without submitting a prompt or making a model request.
+
+Slice 3 automated verification passed on 2026-08-14: agent_end final-response selection, fenced-prose gating, bounded two-turn context preparation, display-only slye.rewrite rendering, and the SLYE_STUB=1 development marker are covered by 27 Node tests. The sandbox transcript/resume gate in doc-2 remains pending; this slice makes no secondary-model request.
 <!-- SECTION:NOTES:END -->

@@ -1,6 +1,6 @@
 # Speak like you eat
 
-SLYE is a Pi package for plain-language companion rewrites. Slice 2 implements configuration and onboarding only: it validates and atomically saves `slye.json`, warns when configuration is needed, and provides `/slye model`, `/slye on`, and `/slye off`. Rewriting, transcript observation, display entries, and model requests are **not implemented yet**.
+SLYE is a Pi package for plain-language companion rewrites. Slice 3 adds final-response selection, bounded prior-context preparation, and a temporary display-only development stub. Set `SLYE_STUB=1` to append a `🤌 Speak like you eat:` card after an eligible response; the card repeats the complete target under a development marker. Real rewriting and secondary-model calls are **not implemented yet**.
 
 The authoritative MVP target is the [SLYE MVP specification](backlog/docs/specs/doc-1%20-%20SLYE-MVP-specification.md).
 
@@ -31,4 +31,11 @@ pi install --local ../speak_like_you_eat
 pi list --approve
 ```
 
-For the slice-specific manual checks, use the [sandbox runbook](backlog/docs/runbooks/doc-2%20-%20SLYE-sandbox-manual-checks.md).
+For the slice-3 display check, use the existing sandbox project configuration and run:
+
+```sh
+cd ../speak_like_you_eat_sandbox
+SLYE_STUB=1 pi --approve
+```
+
+This submits one primary-model request and no secondary-model request. For the slice-specific manual checks, use the [sandbox runbook](backlog/docs/runbooks/doc-2%20-%20SLYE-sandbox-manual-checks.md).

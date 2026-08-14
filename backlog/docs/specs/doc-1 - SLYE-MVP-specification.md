@@ -3,13 +3,13 @@ id: doc-1
 title: SLYE MVP specification
 type: specification
 created_date: '2026-08-13 23:14'
-updated_date: '2026-08-14 00:13'
+updated_date: '2026-08-14 00:56'
 ---
 # SLYE MVP specification
 
 ## Status
 
-This document defines the approved **target MVP**. Slice 2 implements typed configuration and onboarding: validated atomic `slye.json` persistence, the TUI startup warning, and `/slye model|on|off`. Rewriting and display are not implemented: there is no transcript observation, custom entry renderer, rewrite stub, model request, loading indicator, timeout, or cancellation yet.
+This document defines the approved **target MVP**. Slice 3 implements final-response selection, fenced-code prose gating, bounded two-turn context preparation, and a persistent display-only companion card under a temporary `SLYE_STUB=1` development stub. The stub repeats the complete target response under a development marker; it does not call a secondary model. Real model rewriting, loading, cancellation, and timeout behavior remain unimplemented. The approved target behavior below is unchanged.
 
 ## Scope
 

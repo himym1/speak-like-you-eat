@@ -21,7 +21,8 @@
     "check": "npm run typecheck && npm test"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*"
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
