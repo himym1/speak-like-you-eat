@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@zambo'
 created_date: '2026-08-14 01:54'
-updated_date: '2026-08-14 14:51'
+updated_date: '2026-08-14 15:36'
 labels: []
 dependencies: []
 references:
@@ -66,4 +66,6 @@ Phase-two no-call setup validation completed: exact nine-row fingerprint `59fc67
 Phase-two execution approval: the user explicitly approved the exact nine-row fingerprint `59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728` with conservative OpenRouter-equivalent ceiling USD 0.16476768. No other model, fixture, prompt variant, or judge call is approved.
 
 Approved phase-two execution completed for fingerprint `59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728`: 9/9 rows succeeded with normal `stop`; no timeout, provider error, or runner stop occurred. Provider-reported totals were 2,784 input, 702 output, zero reasoning, and 3,486 total tokens. Sum of call latency was 24,112 ms; median 1,701 ms; maximum 8,766 ms. Usage-based OpenRouter-equivalent cost was USD 0.00041840; actual provider billing or quota accounting can differ. The separate ignored blind report and nine-placeholder score sheet are under `benchmark/.work/phase-2/`; the mapping remains hidden from the human. No judge-model or further prompt call ran.
+
+Phase-two blind human review was completed before identity reveal and locked at SHA-256 `87381478f7a4fefb409b75bf720b599dda31328dcdf43a8e79c9f8a58e85e585`: 9/9 Q/F/S scores. Every fidelity and safety score remained 2. On the three matched fixtures, Terra off mean Q improved from 1.667 to 2.000; GPT-OSS 120B low declined from 1.667 to 1.500; DeepSeek V4 off improved from 1.333 to 1.500. Across all nine matched rows, mean Q improved from 1.556 to 1.667. Terra alone fully fixed the backup-cliché case; GPT-OSS and DeepSeek still scored Q=1 there. The local ignored row-by-row comparison is `benchmark/.work/phase-2/human-comparison.json`. The prompt variant has no observed fidelity/safety regression but its quality effect is model-dependent. No additional call ran.
 <!-- SECTION:NOTES:END -->
