@@ -3,7 +3,7 @@ id: doc-1
 title: SLYE MVP specification
 type: specification
 created_date: '2026-08-13 23:14'
-updated_date: '2026-08-14 15:59'
+updated_date: '2026-08-14 17:25'
 ---
 # SLYE MVP specification
 
@@ -44,6 +44,8 @@ SLYE operates only in Pi's interactive TUI. Outside the TUI it is a no-op.
 - Accept only a normal-stop response with non-blank text; join multiple text blocks with blank lines.
 
 ## Benchmark guidance
+
+See the complete reviewed [benchmark results](doc-4%20-%20SLYE-benchmark-results.md) for methodology, aggregate tables, costs, and limitations.
 
 - Quality-first recommendation: `openai-codex/gpt-5.6-terra` with reasoning off. Low-latency recommendation: `ollama-cloud/deepseek-v4-flash:0731` with reasoning off. Across both prompt phases, measured DeepSeek latency was about one-third of Terra latency.
 - `ollama-cloud/gpt-oss:20b` was tested at low and high thinking across all six fixtures. Low was fast but lower quality; high improved quality only slightly while increasing mean latency from about 1.7 seconds to about 17.2 seconds, so neither configuration is recommended.

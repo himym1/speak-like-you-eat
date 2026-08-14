@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@zambo'
 created_date: '2026-08-13 23:04'
-updated_date: '2026-08-14 02:33'
+updated_date: '2026-08-14 17:55'
 labels: []
 dependencies:
   - TASK-3
@@ -52,6 +52,12 @@ Slice 1 tooling correction: Backlog CLI 1.50.1 can create but cannot update deci
 Slice 4 implementation detail: remove the SLYE_STUB path; while agent_end is still active, reuse Pi's native working indicator with the exact message Rewriting AI-speak… and the active agent AbortSignal for Escape; race an isolated configured-model completion against that cancellation and a local 45-second deadline; accept only a non-empty normal-stop text response; append it display-only; restore the working message in finally; and cover success, prompt payload, cancellation, timeout, provider failure, and warning-once behavior. Replace the cryptic model-deduplication NUL key with explicit provider/id comparison in the same slice.
 
 Slice 5 final hardening: pin the 199-character rejection boundary; make the packed artifact self-contained by including the authoritative specification/runbook referenced by README; finish README installation, behavior, cost, cancellation, failure, and development guidance without claiming npm publication; extend package-contract checks where useful; update governed status/runbook through Backlog CLI; run all checks plus an isolated tarball install/list smoke with no model call; audit secrets/dead stub/debug output; run taste/spec review, then docs-reviewer and final-reviewer once; resolve findings, verify every acceptance criterion objectively, and finalize TASK-1.
+
+7. Publish a standalone governed benchmark-results document with the complete phase-one configuration table, phase-two before/after comparison, measured latency and OpenRouter-equivalent cost, blind-review methodology, recommendations, exact evidence hashes, and explicit small-corpus limitations. Link it concisely from README, the current specification, and the benchmark procedure; include every README-linked governed document in the package and update the package-contract test from eight to nine files. Make no model call and do not version ignored row-level outputs or identity mappings.
+
+8. Run the normal taste/spec review before the documentation commit, verify the generated tarball allowlist and all automated checks, then include the new report in the branch-level docs/final reviews already required for TASK-1 closure.
+
+9. Correct benchmark publication arithmetic before commit: derive each phase-one and phase-two cost from stored sanitized per-row usage and the frozen manifest price model using decimal arithmetic instead of trusting the local human aggregate's cost field; publish phase-one total USD 0.06482709 and median latency 3,800.5 ms, record the falsified historical totals in FINDINGS/TASK-3, and leave calls, scores, manifests, and ignored evidence untouched.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -82,4 +88,6 @@ Manual slice-4 gate passed on 2026-08-14 in the sibling sandbox. The first alrea
 Slice 5 verification progress on 2026-08-14: `npm ci` succeeded (`added 150 packages`, `found 0 vulnerabilities`); `npm run check` passed with 34 tests passed, 0 failed, 0 cancelled, and 0 skipped. `npm pack --dry-run --json` was verified to contain exactly `README.md`, `package.json`, `src/config.ts`, `src/index.ts`, `src/model-rewrite.ts`, `src/rewrite.ts`, `backlog/docs/specs/doc-1 - SLYE-MVP-specification.md`, and `backlog/docs/runbooks/doc-2 - SLYE-sandbox-manual-checks.md`, with tests, tasks, decision, workflow, and sandbox files excluded. `git diff --check` passed. `cd ../speak_like_you_eat_sandbox && pi list --approve` listed the local `../../speak_like_you_eat` package. The isolated tarball smoke passed: `npm pack` produced the tarball, `npm install --prefix <temporary-agent>/npm --legacy-peer-deps --ignore-scripts --no-audit --no-fund` installed it, temporary agent settings contained exactly `npm:speak-like-you-eat@0.1.0`, and `pi list --approve` found it; temporary directories were removed. The tracked-product audit found no secrets, stale runtime `SLYE_STUB`, debug output, direct runtime `sendMessage`/`setModel`, or generated artifacts; `test/display.test.ts` intentionally retains a mocked `sendMessage` counter to assert zero calls. Manual slice-4 gate remains passed, including the deliberately inflated Italian fixture and silent Escape cancellation. Slice 5 is still review-pending; no acceptance criteria, final summary, or terminal status were changed.
 
 On 2026-08-14, the user made TASK-3 a release gate after observing the configured model copy a mostly-clear 225-non-whitespace-character English/Italian-style answer containing an isolated cliché. TASK-1 now waits for benchmark recommendations; no benchmark execution is claimed.
+
+Published the standalone governed benchmark report as doc-4 and linked it from README, doc-1, and doc-3. The package is now self-contained with exactly nine files. During adversarial review, raw-row recomputation falsified historical aggregate cost and median fields: current truth is phase one USD 0.06482709 with 3,800.5 ms overall median and corrected per-candidate costs/medians; phase two USD 0.00238211. FINDINGS.md and TASK-3 preserve the corrections. No model call ran and ignored evidence/manifests remained unchanged. Taste/spec review must-fixes were resolved; npm run check passed 56 tests, both dry-runs preserved approved fingerprints/budgets, and the exact nine-file package check passed.
 <!-- SECTION:NOTES:END -->

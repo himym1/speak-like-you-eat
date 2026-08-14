@@ -3,11 +3,13 @@ id: doc-3
 title: SLYE benchmark procedure
 type: guide
 created_date: '2026-08-14 02:50'
-updated_date: '2026-08-14 15:59'
+updated_date: '2026-08-14 17:30'
 ---
 # SLYE benchmark procedure
 
 ## Purpose and safety
+
+The published [SLYE benchmark results](../specs/doc-4%20-%20SLYE-benchmark-results.md) are the authoritative reviewed findings; this document remains the reproduction procedure.
 
 This procedure reproduces two completed benchmark phases. Phase one evaluates the exact prompt that was in production at its approved fingerprint across the fixed six-fixture corpus and 18 configurations (108 calls). Phase two evaluates the prompt later promoted to production across three discriminating fixtures and three shortlisted configurations (nine calls). Benchmark-only system-prompt snapshots preserve both historical prompts. Every call uses one user message containing only the selected context and target; no AGENTS, project/session history, tools, or normal agent prompt enters a completion.
 
@@ -85,7 +87,7 @@ npm run benchmark:phase-2:report
 
 Review and lock the nine quality scores before revealing `benchmark/.work/phase-2/blind-map.json`. Compare the reviewed results against the matching phase-one baseline rows.
 
-The approved run completed 9/9 rows with normal stop. Provider-reported usage was 2,784 input tokens, 702 output tokens, zero reasoning tokens, and 3,486 total tokens; usage-based OpenRouter-equivalent cost was USD 0.00041840. Blind scores were locked at SHA-256 `87381478f7a4fefb409b75bf720b599dda31328dcdf43a8e79c9f8a58e85e585` before identity reveal. Every fidelity and safety score was 2.
+The approved run completed 9/9 rows with normal stop. Provider-reported usage was 2,784 input tokens, 702 output tokens, zero reasoning tokens, and 3,486 total tokens; usage-based OpenRouter-equivalent cost was USD 0.00238211. Blind scores were locked at SHA-256 `87381478f7a4fefb409b75bf720b599dda31328dcdf43a8e79c9f8a58e85e585` before identity reveal. Every fidelity and safety score was 2.
 
 On the three matched fixtures, Terra off mean quality improved from 1.667 to 2.000, GPT-OSS 120B low declined from 1.667 to 1.500, and DeepSeek V4 off improved from 1.333 to 1.500. Overall mean quality improved from 1.556 to 1.667. Terra alone fully fixed the backup-cliché case, so the prompt effect is positive overall but model-dependent.
 

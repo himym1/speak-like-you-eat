@@ -2,7 +2,7 @@
 
 SLYE is a Pi package that adds a plain-language companion rewrite after an eligible completed response. It runs only in Pi's interactive TUI: the original response stays visible and unchanged, and the `🤌 Speak like you eat:` card is display-only and never enters LLM context.
 
-The authoritative behavior is in the [SLYE MVP specification](backlog/docs/specs/doc-1%20-%20SLYE-MVP-specification.md). For hands-on checks, use the [sandbox runbook](backlog/docs/runbooks/doc-2%20-%20SLYE-sandbox-manual-checks.md).
+The authoritative behavior is in the [SLYE MVP specification](backlog/docs/specs/doc-1%20-%20SLYE-MVP-specification.md). The complete benchmark evidence is in the [SLYE benchmark results](backlog/docs/specs/doc-4%20-%20SLYE-benchmark-results.md). For hands-on checks, use the [sandbox runbook](backlog/docs/runbooks/doc-2%20-%20SLYE-sandbox-manual-checks.md).
 
 ## Install from a local clone
 
@@ -26,7 +26,7 @@ The global configuration is `${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/slye.json`.
 
 SLYE rewrites only normally completed final assistant responses with at least 200 non-whitespace prose characters after fenced code is excluded. It skips intermediate, aborted, errored, truncated, tool-call, thinking, and tool-result content.
 
-Each eligible response makes one isolated secondary request. Model quality can vary, and already-clear prose may be returned unchanged. On the fixed public benchmark, `openai-codex/gpt-5.6-terra` produced the strongest rewrites while `ollama-cloud/deepseek-v4-flash:0731` was about three times faster; higher thinking levels did not reliably help. These are small-corpus measurements, not universal provider guarantees.
+Each eligible response makes one isolated secondary request. Model quality can vary, and already-clear prose may be returned unchanged. The [benchmark results](backlog/docs/specs/doc-4%20-%20SLYE-benchmark-results.md) contain the full aggregate tables; on the fixed public benchmark, `openai-codex/gpt-5.6-terra` produced the strongest rewrites while `ollama-cloud/deepseek-v4-flash:0731` was about three times faster, and higher thinking levels did not reliably help. These are small-corpus measurements, not universal provider guarantees.
 
 While the secondary request runs, Pi shows `Rewriting AI-speak…`. Escape cancels it silently. SLYE stops waiting after a local 45-second deadline, leaves the original response alone, and shows at most one fail-open warning per session for timeout or other failures. A non-cooperative provider may continue and consume usage after local cancellation or timeout.
 

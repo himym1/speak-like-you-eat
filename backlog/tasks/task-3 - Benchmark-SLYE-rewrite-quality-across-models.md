@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@zambo'
 created_date: '2026-08-14 01:54'
-updated_date: '2026-08-14 16:08'
+updated_date: '2026-08-14 17:53'
 labels: []
 dependencies: []
 references:
@@ -74,6 +74,12 @@ Phase-two blind human review was completed before identity reveal and locked at 
 The user approved promoting the three tested instructions. Implementation must preserve phase-one fingerprint `80d7d401fe9862d3d558efc4ba8b674014dd3e7e975f02d77cc3b37c30fbd759` and phase-two fingerprint `59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728`; dynamic derivation from the production prompt would duplicate instructions and invalidate both manifests after promotion, so benchmark prompt snapshots are required.
 
 Production promotion completed without a new model call: `buildRewriteContext` now contains the exact three phase-two instructions immediately before output-only. Benchmark-only frozen phase-one and phase-two system prompts keep fingerprints `80d7d401fe9862d3d558efc4ba8b674014dd3e7e975f02d77cc3b37c30fbd759` and `59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728` byte-stable; committed manifests exactly match regenerated builders. `npm run check` passed Biome, tsc, and 56 tests; both no-call dry-runs preserved approved budgets; the npm package remained exactly eight files. Taste/spec reviewers reported no must-fix findings. Final evidence-based guidance is Terra off for quality, DeepSeek V4 off for roughly one-third Terra latency, and no higher-thinking recommendation; GPT-OSS 20B was tested at low/high but was not competitive, while GPT-OSS 120B low regressed slightly under the promoted prompt.
+
+Correction (2026-08-14): The prior USD 0.00041840 phase-two aggregate was an arithmetic/reporting error. Recomputing each of the nine stored sanitized usages with `calculateOpenRouterCost(result.usage, manifest.pricing.prices[row.priceModel])` and summing the decimal values gives USD 0.00238211 (Terra USD 0.00212100 + GPT-OSS 120B low USD 0.00007589 + DeepSeek USD 0.00018522). Candidate comparisons remain valid. No new model call ran.
+
+Correction (2026-08-14): The earlier USD 0.01310292 phase-one aggregate and 3,847ms median were reporting errors. Exact per-row recomputation gives USD 0.06482709 and a 3,800.5ms median from sorted middle values 3,754ms and 3,847ms. No call, evidence, or fingerprint changed.
+
+Correction: All 18 candidate median fields in the local human aggregate used the upper-middle value; doc-4 recomputes the true medians. No calls, evidence, or fingerprint changed.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
