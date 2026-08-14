@@ -5,7 +5,9 @@ import { join } from "node:path";
 import test from "node:test";
 import { CONFIG_DIR_NAME, type ExtensionAPI, type ExtensionCommandContext, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { CONFIG_FILENAME, readConfig, writeConfigAtomically } from "../src/config.ts";
-import speakLikeYouEat, { selectModelCandidates } from "../src/index.ts";
+import speakLikeYouEat from "../src/index.ts";
+import { formatModelCandidate, selectModelCandidates } from "../src/model-picker.ts";
+import { createModelPickerDriver } from "./picker-driver.ts";
 
 type PiModel = ReturnType<ExtensionContext["modelRegistry"]["getAvailable"]>[number];
 type Notification = { message: string; type: "info" | "warning" | "error" | undefined };
@@ -55,15 +57,19 @@ function createContext(options: {
   authenticated?: (model: PiModel) => boolean;
   selectAnswers?: Array<string | undefined>;
   confirmAnswers?: boolean[];
+  scopedModels?: Array<{ model: PiModel; thinkingLevel?: string }>;
+  customInputs?: string[];
 }): {
   context: ExtensionCommandContext;
   notifications: Notification[];
   selectedTitles: string[];
   confirmationMessages: Confirmation[];
+  pickerRenders: string[];
 } {
   const notifications: Notification[] = [];
   const selectedTitles: string[] = [];
   const confirmationMessages: Confirmation[] = [];
+  const driver = createModelPickerDriver(options.customInputs ?? ["\r"]);
   const models = options.models ?? [];
   const selectAnswers = [...(options.selectAnswers ?? [])];
   const confirmAnswers = [...(options.confirmAnswers ?? [])];
@@ -76,12 +82,15 @@ function createContext(options: {
   const context = {
     mode: options.mode ?? "tui",
     cwd: options.cwd,
-    scopedModels: [],
+    scopedModels: options.scopedModels ?? [],
     modelRegistry: registry,
     isProjectTrusted: () => options.trusted ?? false,
     ui: {
       notify(message: string, type?: Notification["type"]) {
         notifications.push({ message, type });
+      },
+      custom(factory: Parameters<ExtensionCommandContext["ui"]["custom"]>[0]) {
+        return driver.run(factory);
       },
       async select(title: string): Promise<string | undefined> {
         selectedTitles.push(title);
@@ -94,26 +103,22 @@ function createContext(options: {
     },
   } as unknown as ExtensionCommandContext;
 
-  return { context, notifications, selectedTitles, confirmationMessages };
+  return { context, notifications, selectedTitles, confirmationMessages, pickerRenders: driver.renders };
 }
 
-test("chooses authenticated scoped models or all available models, then deduplicates and orders them", () => {
+test("selects authenticated candidates, removes duplicates, and orders them", () => {
   const alpha = model("alpha", "one");
   const beta = model("beta", "two");
   const unavailable = model("alpha", "three");
 
   assert.deepEqual(
-    selectModelCandidates(
-      [{ model: beta }, { model: alpha }, { model: beta }, { model: unavailable }],
-      [alpha],
-      (candidate) => candidate !== unavailable,
-    ).map(({ label }) => label),
-    ["alpha / one", "beta / two"],
+    selectModelCandidates([beta, alpha, beta, unavailable], (candidate) => candidate !== unavailable).map(formatModelCandidate),
+    ["alpha / one · thinking: off", "beta / two · thinking: off"],
   );
-  assert.deepEqual(
-    selectModelCandidates([], [beta, alpha], () => true).map(({ label }) => label),
-    ["alpha / one", "beta / two"],
-  );
+  assert.deepEqual(selectModelCandidates([beta, alpha], () => true).map(formatModelCandidate), [
+    "alpha / one · thinking: off",
+    "beta / two · thinking: off",
+  ]);
 });
 
 test("warns non-modally on an unconfigured TUI session and does nothing outside TUI", async (t) => {
@@ -147,8 +152,9 @@ test("/slye model writes the selected trusted project configuration", async (t) 
   const { context, notifications } = createContext({
     cwd: join(directory, "project"),
     trusted: true,
-    models: [chosen],
-    selectAnswers: ["openai / gpt-5", "This project only"],
+    models: [],
+    scopedModels: [{ model: chosen, thinkingLevel: "high" }],
+    selectAnswers: ["This project only"],
   });
   await extension.command.handler("model", context);
 
@@ -158,7 +164,42 @@ test("/slye model writes the selected trusted project configuration", async (t) 
     path,
     config: { enabled: true, model: { provider: "openai", id: "gpt-5" } },
   });
-  assert.deepEqual(notifications, [{ message: "SLYE enabled with openai / gpt-5 for This project only.", type: "info" }]);
+  assert.deepEqual(notifications, [{ message: "SLYE enabled with openai / gpt-5 · thinking: off for This project only.", type: "info" }]);
+});
+
+test("/slye model can select an all-only authenticated model after opening scoped", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "slye-onboarding-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
+  const agentDirectory = join(directory, "agent");
+  process.env.PI_CODING_AGENT_DIR = agentDirectory;
+  t.after(() => {
+    if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+    else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
+  });
+
+  const scoped = model("openai", "scoped");
+  const allOnly = model("zeta", "all-only");
+  const extension = createExtension();
+  const { context, notifications, pickerRenders } = createContext({
+    cwd: join(directory, "project"),
+    models: [scoped, allOnly],
+    scopedModels: [{ model: scoped, thinkingLevel: "high" }],
+    customInputs: ["\t", "\u001b[B", "\r"],
+    selectAnswers: ["All projects"],
+  });
+  await extension.command.handler("model", context);
+
+  const path = join(agentDirectory, "slye.json");
+  assert.deepEqual(await readConfig(path), {
+    kind: "valid",
+    path,
+    config: { enabled: true, model: { provider: "zeta", id: "all-only" } },
+  });
+  assert.match(pickerRenders[0] ?? "", /Scope: Scoped models/);
+  assert.match(pickerRenders[0] ?? "", /openai \/ scoped · thinking: off/);
+  assert.match(pickerRenders[1] ?? "", /Scope: All authenticated models/);
+  assert.deepEqual(notifications, [{ message: "SLYE enabled with zeta / all-only · thinking: off for All projects.", type: "info" }]);
 });
 
 test("/slye model writes the selected global configuration", async (t) => {
@@ -176,7 +217,7 @@ test("/slye model writes the selected global configuration", async (t) => {
   const { context } = createContext({
     cwd: join(directory, "project"),
     models: [model("openai", "gpt-5")],
-    selectAnswers: ["openai / gpt-5", "All projects"],
+    selectAnswers: ["All projects"],
   });
   await extension.command.handler("model", context);
 
@@ -186,6 +227,26 @@ test("/slye model writes the selected global configuration", async (t) => {
     path,
     config: { enabled: true, model: { provider: "openai", id: "gpt-5" } },
   });
+});
+
+test("/slye model warns when no authenticated model has usable thinking metadata", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "slye-onboarding-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const malformed = {
+    ...model("openai", "gpt-5"),
+    reasoning: true,
+    thinkingLevelMap: { off: null, minimal: null, low: null, medium: null, high: null, xhigh: null, max: null },
+  } as PiModel;
+  const extension = createExtension();
+  const { context, notifications, selectedTitles } = createContext({
+    cwd: join(directory, "project"),
+    models: [malformed],
+  });
+
+  await extension.command.handler("model", context);
+
+  assert.deepEqual(notifications, [{ message: "No authenticated models are available for SLYE.", type: "warning" }]);
+  assert.deepEqual(selectedTitles, []);
 });
 
 test("/slye off creates disabled global configuration and /slye on without a usable model opens the picker", async (t) => {
@@ -212,11 +273,11 @@ test("/slye off creates disabled global configuration and /slye on without a usa
     cwd: join(directory, "project"),
     models: [oldModel, chosen],
     authenticated: (candidate) => candidate === chosen,
-    selectAnswers: ["openai / gpt-5", "All projects"],
+    selectAnswers: ["All projects"],
   });
   await extension.command.handler("on", on.context);
 
-  assert.deepEqual(on.selectedTitles, ["Choose a SLYE model", "Save SLYE model for"]);
+  assert.deepEqual(on.selectedTitles, ["Save SLYE model for"]);
   assert.deepEqual(await readConfig(path), {
     kind: "valid",
     path,
@@ -316,7 +377,13 @@ test("/slye on restores a usable trusted project model without opening a picker"
   const { context, notifications, selectedTitles } = createContext({
     cwd: projectDirectory,
     trusted: true,
-    models: [model("project", "model")],
+    models: [
+      {
+        ...model("project", "model"),
+        reasoning: true,
+        thinkingLevelMap: { off: null, minimal: null },
+      } as PiModel,
+    ],
   });
   await extension.command.handler("on", context);
 
@@ -327,7 +394,7 @@ test("/slye on restores a usable trusted project model without opening a picker"
     config: { enabled: true, model: projectModel },
   });
   assert.equal(await readFile(globalPath, "utf8"), globalContents);
-  assert.deepEqual(notifications, [{ message: "SLYE enabled with project / model for This project only.", type: "info" }]);
+  assert.deepEqual(notifications, [{ message: "SLYE enabled with project / model · thinking: low for This project only.", type: "info" }]);
 });
 
 test("startup warns once for invalid configuration, warns for unusable models, and ignores disabled configuration", async (t) => {
@@ -430,7 +497,7 @@ test("global model selection removes a confirmed trusted project file and preser
     cwd: projectDirectory,
     trusted: true,
     models: [model("openai", "gpt-5")],
-    selectAnswers: ["openai / gpt-5", "All projects"],
+    selectAnswers: ["All projects"],
     confirmAnswers: [false],
   });
   await extension.command.handler("model", cancelled.context);
@@ -448,7 +515,7 @@ test("global model selection removes a confirmed trusted project file and preser
     cwd: projectDirectory,
     trusted: true,
     models: [model("openai", "gpt-5")],
-    selectAnswers: ["openai / gpt-5", "All projects"],
+    selectAnswers: ["All projects"],
     confirmAnswers: [true],
   });
   await extension.command.handler("model", confirmed.context);
@@ -458,7 +525,9 @@ test("global model selection removes a confirmed trusted project file and preser
     config: { enabled: true, model: { provider: "openai", id: "gpt-5" } },
   });
   assert.equal((await readConfig(projectPath)).kind, "missing");
-  assert.deepEqual(confirmed.notifications, [{ message: "SLYE enabled with openai / gpt-5 for All projects.", type: "info" }]);
+  assert.deepEqual(confirmed.notifications, [
+    { message: "SLYE enabled with openai / gpt-5 · thinking: off for All projects.", type: "info" },
+  ]);
 });
 
 test("cancelled model selection performs no writes", async (t) => {
@@ -476,7 +545,7 @@ test("cancelled model selection performs no writes", async (t) => {
   const { context, notifications } = createContext({
     cwd: join(directory, "project"),
     models: [model("openai", "gpt-5")],
-    selectAnswers: [undefined],
+    customInputs: ["\u001b"],
   });
   await extension.command.handler("model", context);
 

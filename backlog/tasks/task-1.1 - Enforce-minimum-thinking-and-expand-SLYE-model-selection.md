@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@zambo'
 created_date: '2026-08-14 19:24'
-updated_date: '2026-08-14 19:47'
+updated_date: '2026-08-14 20:09'
 labels: []
 dependencies: []
 references:
@@ -50,4 +50,8 @@ Harden SLYE's secondary-model path after the benchmark. Every rewrite must autom
 Implementation correction: adding a direct pi-ai dependency caused thousands of lockfile lines of duplicate dependency churn solely to call a small capability helper. The revised plan uses the same documented model metadata semantics through ModelRegistry-inferred types, preserving behavior without a new runtime dependency. The new coherent source module remains intentional, so the packed allowlist changes from nine to ten files.
 
 Slice 1 complete: added a provider-neutral direct completion adapter and automatic lowest-thinking policy without a new runtime dependency. The fixed order is off, minimal, low, medium, high, xhigh, max; standard omitted map entries remain supported, null entries are excluded, and xhigh/max require explicit mappings. The adapter uses public provider/auth APIs, omits reasoning for off, forwards non-off reasoning plus resolved auth/headers/environment/base URL, and never creates an AgentSession or mutates Pi's active model. Saved malformed models fail open and remain unchanged. Taste/spec reviewers found no must-fix issues. Verification passed Biome, type checking, 65 tests, both no-call benchmark dry-runs with unchanged fingerprints/budgets, unchanged config/lock/benchmark files, and the intentional exact ten-file package.
+
+Slice 2 code is complete; the required documentation slice (plan step 6) must follow before TASK-1.1 finalization. AC #6 remains open.
+
+Slice 2 verification complete: `/slye model` now uses a searchable custom TUI picker, defaults to eligible authenticated scoped models, and uses Tab in both directions to show all authenticated eligible models while preserving search. It displays the automatically selected thinking level in rows and enable notifications, ignores scoped pinned thinking, keeps config schema unchanged, and handles empty results, no-scope Tab, wrapped navigation, Escape, and Ctrl-C without writes. Taste/spec review must-fixes were resolved through a shared plain test driver and simpler single-index picker state. Documentation remains the required next slice before finalization. Verification passed Biome, type checking, 73 tests, both no-call dry-runs with unchanged fingerprints/budgets, unchanged config/lock/benchmark files, and the intentional exact eleven-file package.
 <!-- SECTION:NOTES:END -->

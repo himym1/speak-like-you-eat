@@ -18,7 +18,8 @@ import {
   type SlyeConfig,
   writeConfigAtomically,
 } from "./config.ts";
-import { completeModel, lowestSupportedThinkingLevel } from "./model-completion.ts";
+import { completeModel, lowestSupportedThinkingLevel, type ThinkingLevel } from "./model-completion.ts";
+import { formatModelCandidate, pickModel, selectModelCandidates } from "./model-picker.ts";
 import { completeRewrite, type RewriteOutcome } from "./model-rewrite.ts";
 import { prepareRewriteRequest } from "./rewrite.ts";
 
@@ -34,47 +35,8 @@ type SlyePaths = {
 };
 
 type PiModel = NonNullable<ReturnType<ExtensionContext["modelRegistry"]["find"]>>;
+type UsableModel = { model: PiModel; thinkingLevel: ThinkingLevel };
 type RewriteEntryData = { display: string };
-
-export type ModelCandidate = {
-  provider: string;
-  id: string;
-  label: string;
-};
-
-export function selectModelCandidates(
-  scopedModels: readonly { model: PiModel }[],
-  availableModels: readonly PiModel[],
-  hasConfiguredAuth: (model: PiModel) => boolean,
-): ModelCandidate[] {
-  const models = scopedModels.length === 0 ? availableModels : scopedModels.map(({ model }) => model);
-  const candidates: ModelCandidate[] = [];
-
-  for (const model of models) {
-    if (!hasConfiguredAuth(model)) {
-      continue;
-    }
-    if (candidates.some((candidate) => candidate.provider === model.provider && candidate.id === model.id)) {
-      continue;
-    }
-
-    candidates.push({
-      provider: model.provider,
-      id: model.id,
-      label: formatModel(model),
-    });
-  }
-
-  return candidates.sort((left, right) => {
-    if (left.provider !== right.provider) {
-      return left.provider < right.provider ? -1 : 1;
-    }
-    if (left.id === right.id) {
-      return 0;
-    }
-    return left.id < right.id ? -1 : 1;
-  });
-}
 
 export default function speakLikeYouEat(pi: ExtensionAPI): void {
   let hasShownStartupWarning = false;
@@ -141,7 +103,7 @@ export default function speakLikeYouEat(pi: ExtensionAPI): void {
       let outcome: RewriteOutcome;
       try {
         outcome = await completeRewrite(prepared.request, ctx.signal, (request, options) =>
-          completeModel(ctx.modelRegistry, model, request, options),
+          completeModel(ctx.modelRegistry, model.model, request, options),
         );
       } finally {
         ctx.ui.setWorkingMessage();
@@ -211,23 +173,17 @@ export default function speakLikeYouEat(pi: ExtensionAPI): void {
 }
 
 async function chooseAndSaveModel(ctx: ExtensionCommandContext): Promise<void> {
-  const candidates = selectModelCandidates(ctx.scopedModels, ctx.modelRegistry.getAvailable(), (model) =>
-    ctx.modelRegistry.hasConfiguredAuth(model),
+  const scopedCandidates = selectModelCandidates(
+    ctx.scopedModels.map(({ model }) => model),
+    (model) => ctx.modelRegistry.hasConfiguredAuth(model),
   );
-  if (candidates.length === 0) {
+  const allCandidates = selectModelCandidates(ctx.modelRegistry.getAvailable(), (model) => ctx.modelRegistry.hasConfiguredAuth(model));
+  if (scopedCandidates.length === 0 && allCandidates.length === 0) {
     ctx.ui.notify("No authenticated models are available for SLYE.", "warning");
     return;
   }
 
-  const selectedLabel = await ctx.ui.select(
-    "Choose a SLYE model",
-    candidates.map((candidate) => candidate.label),
-  );
-  if (selectedLabel === undefined) {
-    return;
-  }
-
-  const selected = candidates.find((candidate) => candidate.label === selectedLabel);
+  const selected = await pickModel(ctx, scopedCandidates, allCandidates);
   if (selected === undefined) {
     return;
   }
@@ -246,12 +202,12 @@ async function chooseAndSaveModel(ctx: ExtensionCommandContext): Promise<void> {
   const paths = getConfigPaths(ctx);
 
   if (selectedScope === MODEL_SCOPE_PROJECT) {
-    await saveEnabledConfig(ctx, paths.project, config.model, MODEL_SCOPE_PROJECT);
+    await saveEnabledConfig(ctx, paths.project, config.model, MODEL_SCOPE_PROJECT, selected.thinkingLevel);
     return;
   }
 
   if (selectedScope === MODEL_SCOPE_ALL) {
-    await saveGlobalConfig(ctx, paths, projectTrusted, config, selected.label);
+    await saveGlobalConfig(ctx, paths, projectTrusted, config, formatModelCandidate(selected));
   }
 }
 
@@ -327,9 +283,10 @@ async function turnOn(ctx: ExtensionCommandContext): Promise<void> {
   }
   if (effectiveConfig.kind === "valid" && effectiveConfig.config.model !== undefined) {
     const model = effectiveConfig.config.model;
-    if (resolveUsableModel(ctx, model) !== undefined) {
+    const usableModel = resolveUsableModel(ctx, model);
+    if (usableModel !== undefined) {
       const scope = effectiveConfig.scope === "project" ? MODEL_SCOPE_PROJECT : MODEL_SCOPE_ALL;
-      await saveEnabledConfig(ctx, effectiveConfig.path, model, scope);
+      await saveEnabledConfig(ctx, effectiveConfig.path, model, scope, usableModel.thinkingLevel);
       return;
     }
   }
@@ -337,7 +294,13 @@ async function turnOn(ctx: ExtensionCommandContext): Promise<void> {
   await chooseAndSaveModel(ctx);
 }
 
-async function saveEnabledConfig(ctx: ExtensionCommandContext, path: string, model: ModelReference, scope: string): Promise<void> {
+async function saveEnabledConfig(
+  ctx: ExtensionCommandContext,
+  path: string,
+  model: ModelReference,
+  scope: string,
+  thinkingLevel: ThinkingLevel,
+): Promise<void> {
   try {
     await writeConfigAtomically(path, { enabled: true, model });
   } catch {
@@ -345,7 +308,7 @@ async function saveEnabledConfig(ctx: ExtensionCommandContext, path: string, mod
     return;
   }
 
-  ctx.ui.notify(`SLYE enabled with ${formatModel(model)} for ${scope}.`, "info");
+  ctx.ui.notify(`SLYE enabled with ${formatModelCandidate({ ...model, thinkingLevel })} for ${scope}.`, "info");
 }
 
 function parseRewriteEntryData(data: unknown): RewriteEntryData | undefined {
@@ -371,7 +334,7 @@ function getConfigPaths(ctx: ExtensionContext): SlyePaths {
   };
 }
 
-function resolveUsableModel(ctx: ExtensionContext, reference: ModelReference): PiModel | undefined {
+function resolveUsableModel(ctx: ExtensionContext, reference: ModelReference): UsableModel | undefined {
   const model = ctx.modelRegistry.find(reference.provider, reference.id);
   if (model === undefined) {
     return undefined;
@@ -379,13 +342,11 @@ function resolveUsableModel(ctx: ExtensionContext, reference: ModelReference): P
   if (!ctx.modelRegistry.hasConfiguredAuth(model)) {
     return undefined;
   }
-  if (lowestSupportedThinkingLevel(model) === undefined) {
+
+  const thinkingLevel = lowestSupportedThinkingLevel(model);
+  if (thinkingLevel === undefined) {
     return undefined;
   }
 
-  return model;
-}
-
-function formatModel(model: ModelReference): string {
-  return `${model.provider} / ${model.id}`;
+  return { model, thinkingLevel };
 }

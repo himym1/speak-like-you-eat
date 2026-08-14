@@ -8,7 +8,7 @@ type StreamSimple = Provider["streamSimple"];
 type CompletionContext = Parameters<StreamSimple>[1];
 type CompletionOptions = NonNullable<Parameters<StreamSimple>[2]>;
 type AssistantMessage = Awaited<ReturnType<ReturnType<StreamSimple>["result"]>>;
-type ThinkingLevel = (typeof THINKING_LEVELS)[number];
+export type ThinkingLevel = (typeof THINKING_LEVELS)[number];
 
 export type DirectCompletionOptions = {
   signal: NonNullable<CompletionOptions["signal"]>;
