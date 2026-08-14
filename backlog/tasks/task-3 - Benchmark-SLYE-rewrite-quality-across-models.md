@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@zambo'
 created_date: '2026-08-14 01:54'
-updated_date: '2026-08-14 14:46'
+updated_date: '2026-08-14 14:51'
 labels: []
 dependencies: []
 references:
@@ -62,4 +62,8 @@ Blind human review was completed before identity reveal and locked at SHA-256 `b
 The user approved preparing this no-call nine-row phase-two setup. This approval covers implementation and dry-run only, not execution. The prompt variant will explicitly replace clichés/stock metaphors/corporate filler with plain meaning, keep already-clear prose close to its original form without turning it into a list, and forbid simplification by deleting claims, conditions, or instructions.
 
 Phase-two no-call setup validation completed: exact nine-row fingerprint `59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728`; estimated-input/output-ceiling budget USD 0.15991218; conservative maximum OpenRouter-equivalent budget USD 0.16476768. Phase one remains fingerprint `80d7d401fe9862d3d558efc4ba8b674014dd3e7e975f02d77cc3b37c30fbd759` with disjoint call IDs. `npm run check` passed 55 tests; both dry-runs were deterministic; the npm tarball remained exactly eight files; tests preserved an injected phase-two work sentinel; taste and spec reviewers reported no must-fix findings. No phase-two result directory, runtime, network, or model call was created. Execution still requires separate explicit approval of this exact fingerprint and conservative budget.
+
+Phase-two execution approval: the user explicitly approved the exact nine-row fingerprint `59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728` with conservative OpenRouter-equivalent ceiling USD 0.16476768. No other model, fixture, prompt variant, or judge call is approved.
+
+Approved phase-two execution completed for fingerprint `59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728`: 9/9 rows succeeded with normal `stop`; no timeout, provider error, or runner stop occurred. Provider-reported totals were 2,784 input, 702 output, zero reasoning, and 3,486 total tokens. Sum of call latency was 24,112 ms; median 1,701 ms; maximum 8,766 ms. Usage-based OpenRouter-equivalent cost was USD 0.00041840; actual provider billing or quota accounting can differ. The separate ignored blind report and nine-placeholder score sheet are under `benchmark/.work/phase-2/`; the mapping remains hidden from the human. No judge-model or further prompt call ran.
 <!-- SECTION:NOTES:END -->
