@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@zambo'
 created_date: '2026-08-14 01:54'
-updated_date: '2026-08-14 11:26'
+updated_date: '2026-08-14 14:23'
 labels: []
 dependencies: []
 references:
@@ -54,4 +54,6 @@ Final pre-approval validation: manifest fingerprint `80d7d401fe9862d3d558efc4ba8
 Execution approval: the user explicitly approved running the exact 108-call manifest fingerprint `80d7d401fe9862d3d558efc4ba8b674014dd3e7e975f02d77cc3b37c30fbd759` with conservative OpenRouter-equivalent ceiling USD 1.63969394. No prompt variant or extra judge call is approved.
 
 Approved phase-one execution completed for the exact fingerprint: 108/108 rows were successful with stop reason `stop`; no timeout, provider error, or runner stop occurred. Provider-reported totals: 54,871 input, 41,325 output, 3,196 reasoning, 96,196 total, zero cache read/write tokens. Sum of call latency was 547,647 ms; median 3,847 ms; maximum 34,797 ms. Usage-based OpenRouter-equivalent cost was USD 0.01310292; actual provider billing or quota accounting can differ. Mechanical checks found zero literal/Markdown/fence damage signals, zero preambles, zero length-limit failures, four unchanged allowed outputs, and eight forbidden-phrase hits requiring review. The ignored blind report and stable mapping were generated under `benchmark/.work/`; identities have not been revealed. Blind human scoring remains pending. No judge-model or prompt-variant call ran.
+
+Blind human review was completed before identity reveal and locked at SHA-256 `bbe90c535ac1a0d0e243dc3f4f0cae6bf97955eb0302e1cebf88d8a9b732979e`: 108/108 Q/F/S scores, including accepted half-points for Q. The human reported that the first three fixtures, especially backup cliché and inflated prose, carried most useful differentiation; the remaining fixtures mainly confirmed safety. All 108 safety scores were 2. The only fidelity scores below 2 were Haiku off and Gemma off on inflated prose. Highest fidelity-safe mean Q was 1.833 for Terra high, Terra off, and GPT-OSS 120B high; GPT-OSS 120B low scored 1.750 with much lower mean latency. Terra off/high and GPT-OSS 120B low/high tied on aggregate Q across the first three fixtures. No configuration earned Q=2 on the backup-cliché fixture. Higher thinking did not consistently improve quality and often increased latency or reduced quality. The local ignored aggregate is `benchmark/.work/human-aggregate.json`. No follow-up model call has run.
 <!-- SECTION:NOTES:END -->
