@@ -1,11 +1,11 @@
 ---
 id: TASK-3
 title: Benchmark SLYE rewrite quality across models
-status: In Progress
+status: Done
 assignee:
   - '@zambo'
 created_date: '2026-08-14 01:54'
-updated_date: '2026-08-14 15:36'
+updated_date: '2026-08-14 16:08'
 labels: []
 dependencies: []
 references:
@@ -24,11 +24,11 @@ Build a reproducible evaluation of SLYE rewrite quality across several authentic
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A versioned public all-English corpus contains six fixed fixtures with explicit expectations: inflated prose, mostly-clear prose with one isolated cliché, an already-clear control, technical literals, Markdown with fenced code, and bounded recent context/prompt-injection resistance.
-- [ ] #2 Before any benchmark call, the exact approved model/thinking-level matrix, 108-call count, and matching public OpenRouter-equivalent per-token budget are recorded.
-- [ ] #3 Every candidate uses the exact production SLYE prompt and an isolated production buildRewriteContext payload containing only the selected chat context and target, with no AGENTS, project, session, or tool context.
-- [ ] #4 Final outputs, elapsed latency, provider-reported usage, requested and actual thinking levels, and stop data are retained reproducibly without chain-of-thought, credentials, response IDs, or headers.
-- [ ] #5 Deterministic objective checks and anonymized blind human review assess simplification, semantic and factual fidelity, English-language fidelity, Markdown/code preservation, unwanted preambles, and unchanged-output rate; they yield model and thinking-level recommendations plus evidence-backed prompt changes.
+- [x] #1 A versioned public all-English corpus contains six fixed fixtures with explicit expectations: inflated prose, mostly-clear prose with one isolated cliché, an already-clear control, technical literals, Markdown with fenced code, and bounded recent context/prompt-injection resistance.
+- [x] #2 Before any benchmark call, the exact approved model/thinking-level matrix, 108-call count, and matching public OpenRouter-equivalent per-token budget are recorded.
+- [x] #3 Every candidate uses the exact production SLYE prompt and an isolated production buildRewriteContext payload containing only the selected chat context and target, with no AGENTS, project, session, or tool context.
+- [x] #4 Final outputs, elapsed latency, provider-reported usage, requested and actual thinking levels, and stop data are retained reproducibly without chain-of-thought, credentials, response IDs, or headers.
+- [x] #5 Deterministic objective checks and anonymized blind human review assess simplification, semantic and factual fidelity, English-language fidelity, Markdown/code preservation, unwanted preambles, and unchanged-output rate; they yield model and thinking-level recommendations plus evidence-backed prompt changes.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -44,6 +44,8 @@ Build a reproducible evaluation of SLYE rewrite quality across several authentic
 8. After execution and blind review, publish recommendations and test an improved prompt only as a separately budgeted phase if evidence warrants it.
 
 9. Based on the locked blind review, prepare a separately fingerprinted phase-two prompt follow-up with only backup-cliche, inflated-prose, and clear-control; only Terra off, GPT-OSS 120B low, and DeepSeek V4 off; and only the improved prompt calls, reusing phase-one baseline results. Keep phase-two manifest, result storage, blind mapping, and report separate from phase one. Include the exact full prompt and selected IDs in the fingerprinted manifest. Retain the same sequential completion method, isolation, 45-second deadline, 8,192-token ceiling, sanitized usage, OpenRouter-equivalent prices, resume semantics, and approval-before-runtime gate. Add no model call until the exact nine-row fingerprint and conservative budget receive separate explicit approval.
+
+10. Promote the user-approved phase-two prompt into production without invalidating historical benchmark evidence: freeze the exact phase-one and phase-two system prompts in benchmark-only snapshot builders, keep both approved manifest fingerprints/call IDs byte-stable, make production buildRewriteContext use exactly the tested phase-two prompt, and add regression tests proving production equals the frozen phase-two payload while phase one remains the old baseline. Update current product truth and benchmark procedure/recommendations through governed CLI operations. Make no additional model call; the nine phase-two calls already tested the exact promoted prompt.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -68,4 +70,14 @@ Phase-two execution approval: the user explicitly approved the exact nine-row fi
 Approved phase-two execution completed for fingerprint `59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728`: 9/9 rows succeeded with normal `stop`; no timeout, provider error, or runner stop occurred. Provider-reported totals were 2,784 input, 702 output, zero reasoning, and 3,486 total tokens. Sum of call latency was 24,112 ms; median 1,701 ms; maximum 8,766 ms. Usage-based OpenRouter-equivalent cost was USD 0.00041840; actual provider billing or quota accounting can differ. The separate ignored blind report and nine-placeholder score sheet are under `benchmark/.work/phase-2/`; the mapping remains hidden from the human. No judge-model or further prompt call ran.
 
 Phase-two blind human review was completed before identity reveal and locked at SHA-256 `87381478f7a4fefb409b75bf720b599dda31328dcdf43a8e79c9f8a58e85e585`: 9/9 Q/F/S scores. Every fidelity and safety score remained 2. On the three matched fixtures, Terra off mean Q improved from 1.667 to 2.000; GPT-OSS 120B low declined from 1.667 to 1.500; DeepSeek V4 off improved from 1.333 to 1.500. Across all nine matched rows, mean Q improved from 1.556 to 1.667. Terra alone fully fixed the backup-cliché case; GPT-OSS and DeepSeek still scored Q=1 there. The local ignored row-by-row comparison is `benchmark/.work/phase-2/human-comparison.json`. The prompt variant has no observed fidelity/safety regression but its quality effect is model-dependent. No additional call ran.
+
+The user approved promoting the three tested instructions. Implementation must preserve phase-one fingerprint `80d7d401fe9862d3d558efc4ba8b674014dd3e7e975f02d77cc3b37c30fbd759` and phase-two fingerprint `59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728`; dynamic derivation from the production prompt would duplicate instructions and invalidate both manifests after promotion, so benchmark prompt snapshots are required.
+
+Production promotion completed without a new model call: `buildRewriteContext` now contains the exact three phase-two instructions immediately before output-only. Benchmark-only frozen phase-one and phase-two system prompts keep fingerprints `80d7d401fe9862d3d558efc4ba8b674014dd3e7e975f02d77cc3b37c30fbd759` and `59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728` byte-stable; committed manifests exactly match regenerated builders. `npm run check` passed Biome, tsc, and 56 tests; both no-call dry-runs preserved approved budgets; the npm package remained exactly eight files. Taste/spec reviewers reported no must-fix findings. Final evidence-based guidance is Terra off for quality, DeepSeek V4 off for roughly one-third Terra latency, and no higher-thinking recommendation; GPT-OSS 20B was tested at low/high but was not competitive, while GPT-OSS 120B low regressed slightly under the promoted prompt.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Built and executed a reproducible two-phase public benchmark: six English fixtures across 18 configurations (108 calls), followed by a separately approved nine-call improved-prompt comparison. Retained sanitized usage/latency/outputs locally, completed locked blind human scoring, published aggregate model/thinking guidance, promoted the evidence-based prompt without fidelity or safety regressions, and froze both historical prompt manifests so their approved fingerprints remain reproducible. Verification passed 56 tests, both deterministic no-call dry-runs, reviewer checks, and the unchanged eight-file package contract.
+<!-- SECTION:FINAL_SUMMARY:END -->

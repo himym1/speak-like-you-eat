@@ -11,11 +11,11 @@ import {
   calculateOpenRouterCost,
   callIdFor,
   OUTPUT_TOKEN_CEILING,
+  stablePrettyJson,
   writeManifest,
 } from "../benchmark/manifest.ts";
 import { BENCHMARK_CANDIDATES, validateCandidateMatrix } from "../benchmark/matrix.ts";
 import {
-  buildPhaseTwoContext,
   buildPhaseTwoManifest,
   PHASE_ONE_BASELINE_FINGERPRINT,
   PHASE_TWO_CANDIDATE_IDS,
@@ -24,8 +24,13 @@ import {
   PHASE_TWO_FIXTURES,
   PHASE_TWO_PROMPT_VARIANT_ID,
   PHASE_TWO_SUITE,
-  phaseTwoSystemPrompt,
 } from "../benchmark/phase-2.ts";
+import {
+  buildPhaseOneContext,
+  buildPhaseTwoContext,
+  PHASE_ONE_SYSTEM_PROMPT,
+  PHASE_TWO_SYSTEM_PROMPT,
+} from "../benchmark/prompt-variants.ts";
 import { assignCandidateLabels, evaluateMechanicalChecks, readLocalResults, writeBlindReport } from "../benchmark/report.ts";
 import {
   type BenchmarkResult,
@@ -159,21 +164,8 @@ test("deterministic manifest contains 108 isolated payload rows, explicit semant
   assert.ok(manifest.rows.every((row) => row.completionMethod === "completeSimple" && row.cacheRetention === "none"));
 });
 
-test("phase two pins its subset, prompt, metadata, call identities, and budgets", async () => {
-  const productionPrompt = buildRewriteContext(required(BENCHMARK_CORPUS[0]).request).systemPrompt;
-  const phaseTwoPrompt = phaseTwoSystemPrompt();
-  const finalOutputInstruction = "Output only the rewrite, with no label, preamble, or commentary.";
-  assert.equal(
-    phaseTwoPrompt,
-    [
-      productionPrompt.slice(0, productionPrompt.lastIndexOf("\n")),
-      "Replace clichés, stock metaphors, corporate jargon, slogans, filler, and repetition with their plain meaning; do not preserve or lightly paraphrase them.",
-      "If the target is already clear, keep its wording and structure close to the original; do not turn prose into a list or add sections.",
-      "Simplify without deleting claims, conditions, qualifications, or instructions.",
-      finalOutputInstruction,
-    ].join("\n"),
-  );
-  assert.equal(phaseTwoPrompt.endsWith(finalOutputInstruction), true);
+test("phase two pins its subset, frozen prompt, metadata, call identities, and budgets", async () => {
+  assert.equal(PHASE_TWO_SYSTEM_PROMPT.endsWith("Output only the rewrite, with no label, preamble, or commentary."), true);
   assert.deepEqual(
     PHASE_TWO_FIXTURES.map((fixture) => fixture.id),
     PHASE_TWO_FIXTURE_IDS,
@@ -183,11 +175,15 @@ test("phase two pins its subset, prompt, metadata, call identities, and budgets"
     PHASE_TWO_CANDIDATE_IDS,
   );
 
-  const request = required(BENCHMARK_CORPUS[0]).request;
-  const productionContext = buildRewriteContext(request);
-  const phaseTwoContext = buildPhaseTwoContext(request);
-  assert.deepEqual(phaseTwoContext.messages, productionContext.messages);
-  assert.equal(phaseTwoContext.systemPrompt, phaseTwoPrompt);
+  for (const request of [required(BENCHMARK_CORPUS[0]).request, required(BENCHMARK_CORPUS[4]).request]) {
+    const productionContext = buildRewriteContext(request);
+    const phaseOneContext = buildPhaseOneContext(request);
+    const phaseTwoContext = buildPhaseTwoContext(request);
+    assert.deepEqual(productionContext, phaseTwoContext);
+    assert.deepEqual(phaseOneContext.messages, productionContext.messages);
+    assert.equal(phaseOneContext.systemPrompt, PHASE_ONE_SYSTEM_PROMPT);
+    assert.equal(phaseOneContext.systemPrompt.includes("Replace clichés"), false);
+  }
 
   const [phaseOneManifest, manifest] = await Promise.all([buildManifest(), buildPhaseTwoManifest()]);
   assert.equal(manifest.callCount, 9);
@@ -198,7 +194,7 @@ test("phase two pins its subset, prompt, metadata, call identities, and budgets"
   assert.deepEqual(manifest.suite, {
     id: "phase-2",
     promptVariantId: PHASE_TWO_PROMPT_VARIANT_ID,
-    systemPrompt: phaseTwoPrompt,
+    systemPrompt: PHASE_TWO_SYSTEM_PROMPT,
     phaseOneBaselineFingerprint: PHASE_ONE_BASELINE_FINGERPRINT,
     fixtureIds: PHASE_TWO_FIXTURE_IDS,
     candidateIds: PHASE_TWO_CANDIDATE_IDS,
@@ -270,10 +266,17 @@ test("manifest JSON is deterministic, pretty, and fingerprinted from canonical J
   assert.match(first, /^\{\n {2}"callCount": 108,/);
 });
 
-test("benchmark payload is the exact isolated production Context", async () => {
+test("committed manifests exactly match their frozen prompt builders", async () => {
+  const expectedPhaseOne = `${stablePrettyJson(await buildManifest())}\n`;
+  const expectedPhaseTwo = `${stablePrettyJson(await buildPhaseTwoManifest())}\n`;
+  assert.equal(await readFile(new URL("../benchmark/manifest.json", import.meta.url), "utf8"), expectedPhaseOne);
+  assert.equal(await readFile(new URL("../benchmark/phase-2-manifest.json", import.meta.url), "utf8"), expectedPhaseTwo);
+});
+
+test("phase-one benchmark payload is the frozen historical production baseline", async () => {
   const manifest = await buildManifest();
   const fixture = required(BENCHMARK_CORPUS[0]);
-  const payload = buildRewriteContext(fixture.request);
+  const payload = buildPhaseOneContext(fixture.request);
   const row = required(manifest.rows.find((entry) => entry.fixture === fixture.id));
   assert.equal(row.payloadSha256.length, 64);
   assert.deepEqual(Object.keys(payload).sort(), ["messages", "systemPrompt"]);
@@ -496,16 +499,16 @@ test("only final result categories are settled and retryable failures stop", () 
   );
 });
 
-test("direct completion receives only the production Context and sanitizes text and usage", async () => {
+test("direct completion uses the frozen context for each benchmark phase and sanitizes text and usage", async () => {
   const manifest = await buildManifest();
   const row = required(manifest.rows[0]);
   const fixture = required(BENCHMARK_CORPUS[0]);
-  let seenContext: unknown;
+  const seenContexts: unknown[] = [];
   const runtime = {
     hasConfiguredAuth: () => true,
     getModel: () => ({ thinkingLevelMap: { off: "none" } }),
     completeSimple: async (_model: unknown, context: unknown, options: unknown) => {
-      seenContext = context;
+      seenContexts.push(context);
       assert.equal((options as { cacheRetention: string }).cacheRetention, "none");
       return {
         stopReason: "stop",
@@ -518,7 +521,18 @@ test("direct completion receives only the production Context and sanitizes text 
     },
   };
   const result = await executeRow(row, fixture, runtime as never, undefined, manifest.pricing.prices[row.priceModel]);
-  assert.deepEqual(seenContext, buildRewriteContext(fixture.request));
+  const phaseTwoManifest = await buildPhaseTwoManifest();
+  const phaseTwoRow = required(phaseTwoManifest.rows[0]);
+  const phaseTwoFixture = required(PHASE_TWO_FIXTURES[0]);
+  await executeRow(
+    phaseTwoRow,
+    phaseTwoFixture,
+    runtime as never,
+    undefined,
+    phaseTwoManifest.pricing.prices[phaseTwoRow.priceModel],
+    buildPhaseTwoContext,
+  );
+  assert.deepEqual(seenContexts, [buildPhaseOneContext(fixture.request), buildPhaseTwoContext(phaseTwoFixture.request)]);
   assert.deepEqual(result.textBlocks, ["Final rewrite."]);
   assert.equal(JSON.stringify(result).includes("never save this"), false);
   assert.equal(result.openRouterEquivalentCost, "0.00000196");

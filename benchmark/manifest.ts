@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { buildRewriteContext } from "../src/model-rewrite.ts";
+import type { buildRewriteContext } from "../src/model-rewrite.ts";
 import type { RewriteRequest } from "../src/rewrite.ts";
 import { BENCHMARK_CORPUS, type BenchmarkFixture, verifyCorpusInvariants } from "./corpus.ts";
 import {
@@ -12,6 +12,7 @@ import {
   type RequestedThinking,
   validateCandidateMatrix,
 } from "./matrix.ts";
+import { buildPhaseOneContext } from "./prompt-variants.ts";
 
 export const OUTPUT_TOKEN_CEILING = 8_192;
 export const DEADLINE_MS = 45_000;
@@ -161,7 +162,7 @@ export async function buildManifest(): Promise<BenchmarkManifest> {
   return buildManifestFor({
     fixtures: BENCHMARK_CORPUS,
     candidates: BENCHMARK_CANDIDATES,
-    buildContext: buildRewriteContext,
+    buildContext: buildPhaseOneContext,
   });
 }
 

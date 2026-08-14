@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createAgentSession, type ModelRuntime, SessionManager } from "@earendil-works/pi-coding-agent";
-import { buildRewriteContext } from "../src/model-rewrite.ts";
 import { BENCHMARK_CORPUS, type BenchmarkFixture } from "./corpus.ts";
 import {
   type BenchmarkManifest,
@@ -17,6 +16,7 @@ import {
   writeManifest,
 } from "./manifest.ts";
 import type { ActualThinking, ProviderThinking, RequestedThinking } from "./matrix.ts";
+import { buildPhaseOneContext } from "./prompt-variants.ts";
 
 export const PRODUCTION_WORK_DIRECTORY = fileURLToPath(new URL("./.work/", import.meta.url));
 
@@ -72,7 +72,7 @@ export type BenchmarkSuite = {
 
 export const PHASE_ONE_SUITE: BenchmarkSuite = {
   corpus: BENCHMARK_CORPUS,
-  buildContext: buildRewriteContext,
+  buildContext: buildPhaseOneContext,
   buildManifest,
   writeManifest,
 };
@@ -151,7 +151,7 @@ export async function executeRow(
   runtime: ModelRuntimeLike,
   externalSignal?: AbortSignal,
   price?: OpenRouterPrice,
-  buildContext: RewriteContextBuilder = buildRewriteContext,
+  buildContext: RewriteContextBuilder = buildPhaseOneContext,
 ): Promise<BenchmarkResult> {
   if (externalSignal?.aborted) {
     return baseResult(row, 0, "cancelled", null);

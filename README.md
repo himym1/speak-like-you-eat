@@ -26,7 +26,7 @@ The global configuration is `${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/slye.json`.
 
 SLYE rewrites only normally completed final assistant responses with at least 200 non-whitespace prose characters after fenced code is excluded. It skips intermediate, aborted, errored, truncated, tool-call, thinking, and tool-result content.
 
-Each eligible response makes one isolated secondary request. Model quality can vary, and already-clear prose may be returned unchanged.
+Each eligible response makes one isolated secondary request. Model quality can vary, and already-clear prose may be returned unchanged. On the fixed public benchmark, `openai-codex/gpt-5.6-terra` produced the strongest rewrites while `ollama-cloud/deepseek-v4-flash:0731` was about three times faster; higher thinking levels did not reliably help. These are small-corpus measurements, not universal provider guarantees.
 
 While the secondary request runs, Pi shows `Rewriting AI-speak…`. Escape cancels it silently. SLYE stops waiting after a local 45-second deadline, leaves the original response alone, and shows at most one fail-open warning per session for timeout or other failures. A non-cooperative provider may continue and consume usage after local cancellation or timeout.
 
