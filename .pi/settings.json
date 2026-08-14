@@ -1,5 +1,3 @@
 {
-  "packages": [
-    "npm:@tintinweb/pi-subagents"
-  ]
+  "packages": ["npm:@tintinweb/pi-subagents"]
 }

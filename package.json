@@ -18,9 +18,12 @@
     ]
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "biome:check": "biome check .",
+    "typecheck": "tsc",
     "test": "node --test",
-    "check": "npm run typecheck && npm test",
+    "check": "npm run biome:check && npm run typecheck && npm test",
     "benchmark:dry-run": "node benchmark/cli.ts dry-run",
     "benchmark:run": "node benchmark/cli.ts run",
     "benchmark:report": "node benchmark/cli.ts report",
@@ -33,7 +36,9 @@
     "@earendil-works/pi-tui": "*"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.8",
     "@types/node": "^24.0.0",
+    "lefthook": "2.1.10",
     "typescript": "^5.9.3"
   },
   "engines": {

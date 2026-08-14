@@ -1,12 +1,18 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import test from "node:test";
-import { buildRewriteContext } from "../src/model-rewrite.ts";
+import { pathToFileURL } from "node:url";
 import { BENCHMARK_CORPUS, verifyCorpusInvariants } from "../benchmark/corpus.ts";
-import { buildManifest, calculateOpenRouterCost, callIdFor, OUTPUT_TOKEN_CEILING, type CallIdentity, writeManifest } from "../benchmark/manifest.ts";
+import {
+  buildManifest,
+  type CallIdentity,
+  calculateOpenRouterCost,
+  callIdFor,
+  OUTPUT_TOKEN_CEILING,
+  writeManifest,
+} from "../benchmark/manifest.ts";
 import { BENCHMARK_CANDIDATES, validateCandidateMatrix } from "../benchmark/matrix.ts";
 import {
   buildPhaseTwoContext,
@@ -22,18 +28,19 @@ import {
 } from "../benchmark/phase-2.ts";
 import { assignCandidateLabels, evaluateMechanicalChecks, readLocalResults, writeBlindReport } from "../benchmark/report.ts";
 import {
+  type BenchmarkResult,
+  type BenchmarkSuite,
   completionOptions,
   executeRow,
   finalTextBlocks,
-  runBenchmark,
   isSettledResult,
+  PHASE_ONE_SUITE,
+  runBenchmark,
   sanitizeError,
   shouldStopAfterResult,
   validateRuntimeSupport,
-  PHASE_ONE_SUITE,
-  type BenchmarkResult,
-  type BenchmarkSuite,
 } from "../benchmark/runner.ts";
+import { buildRewriteContext } from "../src/model-rewrite.ts";
 
 async function createTestWorkDirectory(): Promise<string> {
   return mkdtemp(join(tmpdir(), "slye-benchmark-test-"));
@@ -62,7 +69,9 @@ function configuredRuntime(options: { authenticated?: boolean; nullXhigh?: boole
       }
       return {
         reasoning: true,
-        thinkingLevelMap: options.providerDefaults ? { max: "max" } : { off: "omitted", high: "high", max: options.wrongMax ? "high" : "max" },
+        thinkingLevelMap: options.providerDefaults
+          ? { max: "max" }
+          : { off: "omitted", high: "high", max: options.wrongMax ? "high" : "max" },
       };
     },
     completeSimple: async (_model: unknown, _context: unknown) => ({ stopReason: "stop", content: [{ type: "text", text: "fake final" }] }),
@@ -85,14 +94,25 @@ function resultFor(fixture: string, overrides: Partial<BenchmarkResult> = {}): B
   };
 }
 
+function required<T>(value: T | undefined): T {
+  if (value === undefined) {
+    throw new Error("Expected a defined value.");
+  }
+  return value;
+}
+
 test("benchmark corpus remains production-eligible, bounded, and all English fixtures are fixed", () => {
   verifyCorpusInvariants();
   assert.equal(BENCHMARK_CORPUS.length, 6);
-  const injection = BENCHMARK_CORPUS.find((fixture) => fixture.id === "recent-context-injection")!;
+  const injection = required(BENCHMARK_CORPUS.find((fixture) => fixture.id === "recent-context-injection"));
   assert.equal(injection.request.context.length, 4);
   assert.equal(injection.request.context.filter((entry) => entry.role === "user").length, 2);
   assert.match(injection.request.context[2]?.text ?? "", /latest user language is English/);
-  assert.ok(BENCHMARK_CORPUS.find((fixture) => fixture.id === "backup-cliche")?.expectations.forbiddenText.includes("just hope with a technical name"));
+  assert.ok(
+    BENCHMARK_CORPUS.find((fixture) => fixture.id === "backup-cliche")?.expectations.forbiddenText.includes(
+      "just hope with a technical name",
+    ),
+  );
   assert.deepEqual(BENCHMARK_CORPUS.find((fixture) => fixture.id === "technical-literals")?.expectations.requiredLiteralOccurrences, [
     { literal: "42", required: 2 },
   ]);
@@ -100,16 +120,16 @@ test("benchmark corpus remains production-eligible, bounded, and all English fix
     assert.ok(fixture.request.target.replaceAll(/\s/g, "").length >= 200);
     const latestUserText = [...fixture.request.context].reverse().find((entry) => entry.role === "user")?.text;
     assert.notEqual(latestUserText, undefined);
-    assert.match(latestUserText!, /^[\x20-\x7E\n\r\t]*$/);
+    assert.match(required(latestUserText), /^[\x20-\x7E\n\r\t]*$/);
   }
 });
 
 test("matrix uses explicit Pi and provider thinking semantics", () => {
   validateCandidateMatrix();
   assert.equal(BENCHMARK_CANDIDATES.length, 18);
-  const deepSeekOff = BENCHMARK_CANDIDATES.find((candidate) => candidate.id === "ollama-cloud/deepseek-v4-flash:0731#off")!;
-  const haikuOff = BENCHMARK_CANDIDATES.find((candidate) => candidate.id === "anthropic/claude-haiku-4-5#off")!;
-  const lunaOff = BENCHMARK_CANDIDATES.find((candidate) => candidate.id === "openai-codex/gpt-5.6-luna#off")!;
+  const deepSeekOff = required(BENCHMARK_CANDIDATES.find((candidate) => candidate.id === "ollama-cloud/deepseek-v4-flash:0731#off"));
+  const haikuOff = required(BENCHMARK_CANDIDATES.find((candidate) => candidate.id === "anthropic/claude-haiku-4-5#off"));
+  const lunaOff = required(BENCHMARK_CANDIDATES.find((candidate) => candidate.id === "openai-codex/gpt-5.6-luna#off"));
   assert.deepEqual([deepSeekOff.actualThinking, deepSeekOff.providerThinking], ["off", "none"]);
   assert.deepEqual([haikuOff.actualThinking, haikuOff.providerThinking], ["off", "disabled"]);
   assert.deepEqual([lunaOff.actualThinking, lunaOff.providerThinking], ["off", "omitted"]);
@@ -140,7 +160,7 @@ test("deterministic manifest contains 108 isolated payload rows, explicit semant
 });
 
 test("phase two pins its subset, prompt, metadata, call identities, and budgets", async () => {
-  const productionPrompt = buildRewriteContext(BENCHMARK_CORPUS[0]!.request).systemPrompt;
+  const productionPrompt = buildRewriteContext(required(BENCHMARK_CORPUS[0]).request).systemPrompt;
   const phaseTwoPrompt = phaseTwoSystemPrompt();
   const finalOutputInstruction = "Output only the rewrite, with no label, preamble, or commentary.";
   assert.equal(
@@ -154,10 +174,16 @@ test("phase two pins its subset, prompt, metadata, call identities, and budgets"
     ].join("\n"),
   );
   assert.equal(phaseTwoPrompt.endsWith(finalOutputInstruction), true);
-  assert.deepEqual(PHASE_TWO_FIXTURES.map((fixture) => fixture.id), PHASE_TWO_FIXTURE_IDS);
-  assert.deepEqual(PHASE_TWO_CANDIDATES.map((candidate) => candidate.id), PHASE_TWO_CANDIDATE_IDS);
+  assert.deepEqual(
+    PHASE_TWO_FIXTURES.map((fixture) => fixture.id),
+    PHASE_TWO_FIXTURE_IDS,
+  );
+  assert.deepEqual(
+    PHASE_TWO_CANDIDATES.map((candidate) => candidate.id),
+    PHASE_TWO_CANDIDATE_IDS,
+  );
 
-  const request = BENCHMARK_CORPUS[0]!.request;
+  const request = required(BENCHMARK_CORPUS[0]).request;
   const productionContext = buildRewriteContext(request);
   const phaseTwoContext = buildPhaseTwoContext(request);
   assert.deepEqual(phaseTwoContext.messages, productionContext.messages);
@@ -182,13 +208,16 @@ test("phase two pins its subset, prompt, metadata, call identities, and budgets"
     PHASE_TWO_FIXTURE_IDS.flatMap((fixture) => PHASE_TWO_CANDIDATE_IDS.map((candidate) => `${fixture}:${candidate}`)),
   );
   assert.equal(new Set(manifest.rows.map((row) => row.callId)).size, 9);
-  assert.equal(manifest.rows.some((row) => phaseOneManifest.rows.some((phaseOneRow) => phaseOneRow.callId === row.callId)), false);
+  assert.equal(
+    manifest.rows.some((row) => phaseOneManifest.rows.some((phaseOneRow) => phaseOneRow.callId === row.callId)),
+    false,
+  );
   assert.ok(manifest.rows.every((row) => row.completionMethod === "completeSimple" && row.cacheRetention === "none"));
   assert.ok(manifest.rows.every((row) => row.requestMaxTokens === 8_192 && row.outputTokenCeiling === 8_192 && row.deadlineMs === 45_000));
 });
 
 test("call identity includes every execution-relevant row field", async () => {
-  const row = (await buildManifest()).rows[0]!;
+  const row = required((await buildManifest()).rows[0]);
   const identity = {
     fixture: row.fixture,
     payloadSha256: row.payloadSha256,
@@ -238,26 +267,40 @@ test("manifest JSON is deterministic, pretty, and fingerprinted from canonical J
   const first = await readFile(manifestUrl, "utf8");
   await writeManifest(manifest, manifestUrl);
   assert.equal(await readFile(manifestUrl, "utf8"), first);
-  assert.match(first, /^\{\n  "callCount": 108,/);
+  assert.match(first, /^\{\n {2}"callCount": 108,/);
 });
 
 test("benchmark payload is the exact isolated production Context", async () => {
   const manifest = await buildManifest();
-  const fixture = BENCHMARK_CORPUS[0]!;
+  const fixture = required(BENCHMARK_CORPUS[0]);
   const payload = buildRewriteContext(fixture.request);
-  const row = manifest.rows.find((entry) => entry.fixture === fixture.id)!;
+  const row = required(manifest.rows.find((entry) => entry.fixture === fixture.id));
   assert.equal(row.payloadSha256.length, 64);
   assert.deepEqual(Object.keys(payload).sort(), ["messages", "systemPrompt"]);
   assert.equal(payload.messages.length, 1);
   assert.equal(payload.messages[0]?.role, "user");
-  assert.equal(Object.keys(payload.messages[0] ?? {}).sort().join(","), "content,role,timestamp");
+  assert.equal(
+    Object.keys(payload.messages[0] ?? {})
+      .sort()
+      .join(","),
+    "content,role,timestamp",
+  );
   assert.equal("tools" in payload, false);
 });
 
 test("manifest rows and completion options make Haiku high and off settings exact", async () => {
   const manifest = await buildManifest();
-  const haiku = manifest.rows.find((row) => row.fixture === "backup-cliche" && row.canonicalModel === "anthropic/claude-haiku-4-5" && row.requestedThinking === "high")!;
-  const off = manifest.rows.find((row) => row.fixture === "backup-cliche" && row.canonicalModel === "ollama-cloud/deepseek-v4-flash:0731" && row.requestedThinking === "off")!;
+  const haiku = required(
+    manifest.rows.find(
+      (row) => row.fixture === "backup-cliche" && row.canonicalModel === "anthropic/claude-haiku-4-5" && row.requestedThinking === "high",
+    ),
+  );
+  const off = required(
+    manifest.rows.find(
+      (row) =>
+        row.fixture === "backup-cliche" && row.canonicalModel === "ollama-cloud/deepseek-v4-flash:0731" && row.requestedThinking === "off",
+    ),
+  );
   const haikuOptions = completionOptions(haiku, new AbortController().signal);
   const offOptions = completionOptions(off, new AbortController().signal);
   assert.deepEqual(
@@ -276,7 +319,7 @@ test("manifest rows and completion options make Haiku high and off settings exac
       haikuHighThinkingBudget: 7_168,
     },
   );
-  assert.equal(haikuOptions.maxTokens + haikuOptions.thinkingBudgets!.high, 8_192);
+  assert.equal(haikuOptions.maxTokens + required(haikuOptions.thinkingBudgets).high, 8_192);
   assert.deepEqual(
     {
       reasoning: off.reasoning,
@@ -298,7 +341,10 @@ test("manifest rows and completion options make Haiku high and off settings exac
 test("runtime validation checks authentication, model mappings, and unsupported levels before completion", async () => {
   const manifest = await buildManifest();
   assert.doesNotThrow(() => validateRuntimeSupport(configuredRuntime() as never, manifest));
-  assert.throws(() => validateRuntimeSupport(configuredRuntime({ authenticated: false }) as never, manifest), /authentication is unavailable/);
+  assert.throws(
+    () => validateRuntimeSupport(configuredRuntime({ authenticated: false }) as never, manifest),
+    /authentication is unavailable/,
+  );
   assert.throws(() => validateRuntimeSupport(configuredRuntime({ nullXhigh: true }) as never, manifest), /does not support xhigh/);
   assert.throws(() => validateRuntimeSupport(configuredRuntime({ wrongMax: true }) as never, manifest), /maps max unexpectedly/);
   assert.doesNotThrow(() => validateRuntimeSupport(configuredRuntime({ providerDefaults: true }) as never, manifest));
@@ -349,7 +395,7 @@ test("test-supplied storage contains run, resume, and report artifacts", async (
   const first = await runBenchmark(manifest.fingerprint, { workDirectory, runtimeFactory, suite });
   assert.equal(first.stopped, false);
   assert.equal(completions, 108);
-  const resultPath = join(workDirectory, `${manifest.rows[0]!.callId}.json`);
+  const resultPath = join(workDirectory, `${required(manifest.rows[0]).callId}.json`);
   const stored = JSON.parse(await readFile(resultPath, "utf8")) as BenchmarkResult;
   await writeFile(resultPath, `${JSON.stringify({ ...stored, openRouterEquivalentCost: "999" })}\n`);
   const second = await runBenchmark(manifest.fingerprint, { workDirectory, runtimeFactory, suite });
@@ -394,7 +440,7 @@ test("phase-two execution uses its isolated payload, approves before runtime, an
   assert.equal(first.stopped, false);
   assert.equal(first.results.length, 9);
   assert.equal(completions, 9);
-  assert.deepEqual(seenContext, buildPhaseTwoContext(PHASE_TWO_FIXTURES[2]!.request));
+  assert.deepEqual(seenContext, buildPhaseTwoContext(required(PHASE_TWO_FIXTURES[2]).request));
 
   const second = await runBenchmark(manifest.fingerprint, { workDirectory, runtimeFactory, suite });
   assert.equal(second.stopped, false);
@@ -406,7 +452,7 @@ test("a saved timeout is settled, skipped, and lets the next resume finish", asy
   const workDirectory = await createTestWorkDirectory();
   t.after(() => rm(workDirectory, { recursive: true, force: true }));
   const manifest = await buildManifest();
-  const timeoutRow = manifest.rows[0]!;
+  const timeoutRow = required(manifest.rows[0]);
   await mkdir(workDirectory, { recursive: true });
   await writeFile(
     join(workDirectory, `${timeoutRow.callId}.json`),
@@ -432,19 +478,28 @@ test("a saved timeout is settled, skipped, and lets the next resume finish", asy
 test("only final result categories are settled and retryable failures stop", () => {
   assert.equal(isSettledResult(resultFor("fixture")), true);
   assert.equal(isSettledResult(resultFor("fixture", { outcome: "timeout", textBlocks: [], stopReason: null })), true);
-  assert.equal(isSettledResult(resultFor("fixture", { outcome: "error", errorCategory: "provider_error", textBlocks: [], stopReason: null })), true);
-  assert.equal(isSettledResult(resultFor("fixture", { outcome: "error", errorCategory: "unknown", textBlocks: [], stopReason: null })), true);
+  assert.equal(
+    isSettledResult(resultFor("fixture", { outcome: "error", errorCategory: "provider_error", textBlocks: [], stopReason: null })),
+    true,
+  );
+  assert.equal(
+    isSettledResult(resultFor("fixture", { outcome: "error", errorCategory: "unknown", textBlocks: [], stopReason: null })),
+    true,
+  );
   assert.equal(isSettledResult(resultFor("fixture", { outcome: "cancelled", textBlocks: [], stopReason: null })), false);
   for (const errorCategory of ["aborted", "authentication", "rate_limit"] as const) {
     assert.equal(shouldStopAfterResult(resultFor("fixture", { outcome: "error", errorCategory, textBlocks: [], stopReason: null })), true);
   }
-  assert.equal(shouldStopAfterResult(resultFor("fixture", { outcome: "error", errorCategory: "provider_error", textBlocks: [], stopReason: null })), false);
+  assert.equal(
+    shouldStopAfterResult(resultFor("fixture", { outcome: "error", errorCategory: "provider_error", textBlocks: [], stopReason: null })),
+    false,
+  );
 });
 
 test("direct completion receives only the production Context and sanitizes text and usage", async () => {
   const manifest = await buildManifest();
-  const row = manifest.rows[0]!;
-  const fixture = BENCHMARK_CORPUS[0]!;
+  const row = required(manifest.rows[0]);
+  const fixture = required(BENCHMARK_CORPUS[0]);
   let seenContext: unknown;
   const runtime = {
     hasConfiguredAuth: () => true,
@@ -454,7 +509,10 @@ test("direct completion receives only the production Context and sanitizes text 
       assert.equal((options as { cacheRetention: string }).cacheRetention, "none");
       return {
         stopReason: "stop",
-        content: [{ type: "thinking", thinking: "never save this" }, { type: "text", text: "Final rewrite." }],
+        content: [
+          { type: "thinking", thinking: "never save this" },
+          { type: "text", text: "Final rewrite." },
+        ],
         usage: { input: 4, output: 5, cacheRead: 0, cacheWrite: 0, totalTokens: 9 },
       };
     },
@@ -471,7 +529,7 @@ test("direct completion receives only the production Context and sanitizes text 
 
 test("timeout and an already-aborted signal cancel without beginning another completion", async () => {
   const manifest = await buildManifest();
-  const row = { ...manifest.rows[0]!, deadlineMs: 1 };
+  const row = { ...required(manifest.rows[0]), deadlineMs: 1 };
   let signal: AbortSignal | undefined;
   let calls = 0;
   const runtime = {
@@ -483,45 +541,66 @@ test("timeout and an already-aborted signal cancel without beginning another com
       return new Promise(() => undefined);
     },
   };
-  const timedOut = await executeRow(row, BENCHMARK_CORPUS[0]!, runtime as never);
+  const timedOut = await executeRow(row, required(BENCHMARK_CORPUS[0]), runtime as never);
   assert.equal(timedOut.outcome, "timeout");
   assert.equal(signal?.aborted, true);
   const aborted = new AbortController();
   aborted.abort();
-  const cancelled = await executeRow(row, BENCHMARK_CORPUS[0]!, runtime as never, aborted.signal);
+  const cancelled = await executeRow(row, required(BENCHMARK_CORPUS[0]), runtime as never, aborted.signal);
   assert.equal(cancelled.outcome, "cancelled");
   assert.equal(calls, 1);
 });
 
 test("mechanical checks make cliches, case-insensitive forbidden text, literal counts, failures, and preambles visible", () => {
-  const cliche = BENCHMARK_CORPUS.find((fixture) => fixture.id === "backup-cliche")!;
-  assert.ok(evaluateMechanicalChecks(cliche, resultFor(cliche.id, { textBlocks: ["JUST HOPE WITH A TECHNICAL NAME"] })).forbiddenText.includes("just hope with a technical name"));
-  const technical = BENCHMARK_CORPUS.find((fixture) => fixture.id === "technical-literals")!;
-  const checks = evaluateMechanicalChecks(technical, resultFor(technical.id, { textBlocks: ["Run `slye verify --limit 42` from /tmp/slye-demo at https://example.com/docs."] }));
+  const cliche = required(BENCHMARK_CORPUS.find((fixture) => fixture.id === "backup-cliche"));
+  assert.ok(
+    evaluateMechanicalChecks(cliche, resultFor(cliche.id, { textBlocks: ["JUST HOPE WITH A TECHNICAL NAME"] })).forbiddenText.includes(
+      "just hope with a technical name",
+    ),
+  );
+  const technical = required(BENCHMARK_CORPUS.find((fixture) => fixture.id === "technical-literals"));
+  const checks = evaluateMechanicalChecks(
+    technical,
+    resultFor(technical.id, { textBlocks: ["Run `slye verify --limit 42` from /tmp/slye-demo at https://example.com/docs."] }),
+  );
   assert.deepEqual(checks.literalOccurrenceShortfalls, [{ literal: "42", actual: 1, required: 2 }]);
   const wrongCase = evaluateMechanicalChecks(
     technical,
-    resultFor(technical.id, { textBlocks: ["Run `SLYE verify --limit 42` from /tmp/slye-demo at https://example.com/docs with 42 records."] }),
+    resultFor(technical.id, {
+      textBlocks: ["Run `SLYE verify --limit 42` from /tmp/slye-demo at https://example.com/docs with 42 records."],
+    }),
   );
   assert.ok(wrongCase.missingLiterals.includes("slye verify --limit 42"));
-  assert.equal(evaluateMechanicalChecks(technical, resultFor(technical.id, { outcome: "timeout", textBlocks: [] })).expectedChangeSatisfied, false);
-  assert.equal(evaluateMechanicalChecks(cliche, resultFor(cliche.id, { textBlocks: ["Here's a clearer version: text"] })).likelyPreamble, true);
+  assert.equal(
+    evaluateMechanicalChecks(technical, resultFor(technical.id, { outcome: "timeout", textBlocks: [] })).expectedChangeSatisfied,
+    false,
+  );
+  assert.equal(
+    evaluateMechanicalChecks(cliche, resultFor(cliche.id, { textBlocks: ["Here's a clearer version: text"] })).likelyPreamble,
+    true,
+  );
   assert.equal(evaluateMechanicalChecks(cliche, resultFor(cliche.id, { textBlocks: ["Here is the rewrite: text"] })).likelyPreamble, true);
 });
 
 test("blind reports group fixtures, keep a random stable local mapping, and hide identities", async (t) => {
   const workDirectory = await createTestWorkDirectory();
   t.after(() => rm(workDirectory, { recursive: true, force: true }));
-  assert.deepEqual(assignCandidateLabels(["a", "b", "c"], {}, () => 0), {
-    b: "Candidate 01",
-    c: "Candidate 02",
-    a: "Candidate 03",
-  });
-  assert.deepEqual(assignCandidateLabels(["a", "b"], { a: "Candidate 09" }, () => 0), {
-    a: "Candidate 09",
-    b: "Candidate 10",
-  });
-  const fixture = BENCHMARK_CORPUS.find((entry) => entry.id === "markdown-code")!;
+  assert.deepEqual(
+    assignCandidateLabels(["a", "b", "c"], {}, () => 0),
+    {
+      b: "Candidate 01",
+      c: "Candidate 02",
+      a: "Candidate 03",
+    },
+  );
+  assert.deepEqual(
+    assignCandidateLabels(["a", "b"], { a: "Candidate 09" }, () => 0),
+    {
+      a: "Candidate 09",
+      b: "Candidate 10",
+    },
+  );
+  const fixture = required(BENCHMARK_CORPUS.find((entry) => entry.id === "markdown-code"));
   const result = resultFor(fixture.id, {
     textBlocks: ["```markdown\n## model-controlled heading\n```"],
     usage: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4, reasoning: 5, total: 15 },
@@ -535,7 +614,7 @@ test("blind reports group fixtures, keep a random stable local mapping, and hide
   assert.match(text, /mechanical checks, not proof of semantic quality/i);
   assert.equal(text.split(`## ${fixture.source}`).length - 1, 1);
   assert.equal(text.split(fixture.request.target).length - 1, 1);
-  assert.equal(text.split(fixture.request.context[0]!.text).length - 1, 1);
+  assert.equal(text.split(required(fixture.request.context[0]).text).length - 1, 1);
   assert.ok(text.indexOf("### Candidate 01") < text.indexOf("### Candidate 02"));
   assert.match(text, /elapsed milliseconds: 1/);
   assert.match(text, /input tokens: 1/);
@@ -555,14 +634,14 @@ test("phase-two blind reports use only the phase-two corpus", async (t) => {
   for (const fixture of PHASE_TWO_FIXTURES) {
     assert.match(text, new RegExp(fixture.source));
   }
-  assert.equal(text.includes(BENCHMARK_CORPUS.find((fixture) => fixture.id === "technical-literals")!.source), false);
+  assert.equal(text.includes(required(BENCHMARK_CORPUS.find((fixture) => fixture.id === "technical-literals")).source), false);
 });
 
 test("local result loading ignores stale call IDs before parsing or reporting", async (t) => {
   const workDirectory = await createTestWorkDirectory();
   t.after(() => rm(workDirectory, { recursive: true, force: true }));
   const manifest = await buildManifest();
-  const currentRow = manifest.rows[0]!;
+  const currentRow = required(manifest.rows[0]);
   await writeFile(join(workDirectory, "stale-call.json"), `${JSON.stringify(resultFor("removed-fixture", { callId: "stale-call" }))}\n`);
   await writeFile(
     join(workDirectory, `${currentRow.callId}.json`),
@@ -572,12 +651,15 @@ test("local result loading ignores stale call IDs before parsing or reporting", 
   assert.equal(results.length, 1);
   assert.equal(results[0]?.callId, currentRow.callId);
   const report = await writeBlindReport(results, workDirectory, () => 0);
-  assert.match(await readFile(report.reportPath, "utf8"), new RegExp(BENCHMARK_CORPUS[0]!.source));
+  assert.match(await readFile(report.reportPath, "utf8"), new RegExp(required(BENCHMARK_CORPUS[0]).source));
 });
 
 test("decimal cost arithmetic does not use binary floating point", () => {
   assert.equal(
-    calculateOpenRouterCost({ input: 3, output: 2, cacheRead: 1 }, { prompt: "0.0000001", completion: "0.0000006", input_cache_read: "0.00000001" }),
+    calculateOpenRouterCost(
+      { input: 3, output: 2, cacheRead: 1 },
+      { prompt: "0.0000001", completion: "0.0000006", input_cache_read: "0.00000001" },
+    ),
     "0.00000151",
   );
 });

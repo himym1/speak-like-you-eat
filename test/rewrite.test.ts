@@ -1,12 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { AgentEndEvent, SessionEntry } from "@earendil-works/pi-coding-agent";
-import {
-  MAXIMUM_CONTEXT_CHARACTERS,
-  prepareRewriteRequest,
-  serializeContext,
-  stripFencedCodeBlocks,
-} from "../src/rewrite.ts";
+import { MAXIMUM_CONTEXT_CHARACTERS, prepareRewriteRequest, serializeContext, stripFencedCodeBlocks } from "../src/rewrite.ts";
 
 type AgentMessage = AgentEndEvent["messages"][number];
 
@@ -14,10 +9,10 @@ test("prepares the complete eligible final response at the 200-character prose b
   const firstText = "a".repeat(100);
   const secondText = "b".repeat(100);
   const target = assistant([text(firstText), text(secondText)]);
-  const result = prepareRewriteRequest([assistant([text("intermediate")]), target], [
-    entry("user", user("Explain this")),
-    entry("assistant", target),
-  ]);
+  const result = prepareRewriteRequest(
+    [assistant([text("intermediate")]), target],
+    [entry("user", user("Explain this")), entry("assistant", target)],
+  );
 
   assert.deepEqual(result?.request.target, `${firstText}\n\n${secondText}`);
   assert.equal(result?.entryId, "assistant");
@@ -105,11 +100,10 @@ test("context serialization stays within 8,000 characters by retaining the newes
   const target = assistant([text("final ".repeat(40))]);
   const largeIntermediateText = `${"old".repeat(10)}${"new".repeat(3_000)}`;
   const intermediate = assistant([text(largeIntermediateText)]);
-  const result = prepareRewriteRequest([intermediate, target], [
-    entry("user", user("old user".repeat(1_000))),
-    entry("assistant", intermediate),
-    entry("target", target),
-  ]);
+  const result = prepareRewriteRequest(
+    [intermediate, target],
+    [entry("user", user("old user".repeat(1_000))), entry("assistant", intermediate), entry("target", target)],
+  );
 
   assert.equal(result?.request.context.length, 1);
   assert.equal(result?.request.context[0]?.role, "assistant");

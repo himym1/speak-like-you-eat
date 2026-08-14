@@ -3,20 +3,20 @@ import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promise
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createAgentSession, SessionManager, type ModelRuntime } from "@earendil-works/pi-coding-agent";
+import { createAgentSession, type ModelRuntime, SessionManager } from "@earendil-works/pi-coding-agent";
 import { buildRewriteContext } from "../src/model-rewrite.ts";
 import { BENCHMARK_CORPUS, type BenchmarkFixture } from "./corpus.ts";
 import {
-  buildManifest,
-  calculateOpenRouterCost,
   type BenchmarkManifest,
+  buildManifest,
   type CompletionReasoning,
+  calculateOpenRouterCost,
   type ManifestRow,
   type OpenRouterPrice,
   type RewriteContextBuilder,
   writeManifest,
 } from "./manifest.ts";
-import { type ActualThinking, type ProviderThinking, type RequestedThinking } from "./matrix.ts";
+import type { ActualThinking, ProviderThinking, RequestedThinking } from "./matrix.ts";
 
 export const PRODUCTION_WORK_DIRECTORY = fileURLToPath(new URL("./.work/", import.meta.url));
 
@@ -83,7 +83,10 @@ export type RunBenchmarkOptions = {
   suite?: BenchmarkSuite;
 };
 
-export async function runBenchmark(approval: string | undefined, options: RunBenchmarkOptions): Promise<{
+export async function runBenchmark(
+  approval: string | undefined,
+  options: RunBenchmarkOptions,
+): Promise<{
   manifest: BenchmarkManifest;
   results: BenchmarkResult[];
   stopped: boolean;
@@ -249,7 +252,10 @@ export function shouldStopAfterResult(result: BenchmarkResult): boolean {
   if (result.outcome === "timeout" || result.outcome === "cancelled") {
     return true;
   }
-  return result.outcome === "error" && (result.errorCategory === "aborted" || result.errorCategory === "authentication" || result.errorCategory === "rate_limit");
+  return (
+    result.outcome === "error" &&
+    (result.errorCategory === "aborted" || result.errorCategory === "authentication" || result.errorCategory === "rate_limit")
+  );
 }
 
 export function validateRuntimeSupport(runtime: ModelRuntimeLike, manifest: BenchmarkManifest): void {
@@ -285,7 +291,9 @@ export function validateRuntimeSupport(runtime: ModelRuntimeLike, manifest: Benc
 
     // Ollama off and Pi xhigh/max need explicit mappings so they cannot be silently dropped or clamped.
     const needsExplicitMapping =
-      (row.provider === "ollama-cloud" && row.actualPiThinking === "off") || row.actualPiThinking === "xhigh" || row.actualPiThinking === "max";
+      (row.provider === "ollama-cloud" && row.actualPiThinking === "off") ||
+      row.actualPiThinking === "xhigh" ||
+      row.actualPiThinking === "max";
     if (mappedThinking === undefined && needsExplicitMapping) {
       throw new Error(`Configured model does not map ${row.actualPiThinking} to ${row.expectedProviderThinking}: ${row.canonicalModel}`);
     }
@@ -300,7 +308,12 @@ export function finalTextBlocks(content: unknown): string[] {
     return [];
   }
   return content.flatMap((block) =>
-    typeof block === "object" && block !== null && "type" in block && block.type === "text" && "text" in block && typeof block.text === "string"
+    typeof block === "object" &&
+    block !== null &&
+    "type" in block &&
+    block.type === "text" &&
+    "text" in block &&
+    typeof block.text === "string"
       ? [block.text]
       : [],
   );
@@ -326,12 +339,7 @@ async function createIsolatedRuntime(cwd: string): Promise<{ runtime: ModelRunti
   return { runtime: session.modelRuntime, dispose: () => session.dispose() };
 }
 
-function baseResult(
-  row: ManifestRow,
-  elapsedMs: number,
-  outcome: BenchmarkResult["outcome"],
-  stopReason: string | null,
-): BenchmarkResult {
+function baseResult(row: ManifestRow, elapsedMs: number, outcome: BenchmarkResult["outcome"], stopReason: string | null): BenchmarkResult {
   return {
     callId: row.callId,
     fixture: row.fixture,

@@ -1,6 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { randomUUID } from "node:crypto";
 
 export const CONFIG_FILENAME = "slye.json";
 
@@ -74,11 +74,7 @@ export async function readConfig(path: string): Promise<ConfigReadResult> {
   }
 }
 
-export async function loadEffectiveConfig(
-  globalPath: string,
-  projectPath: string,
-  projectTrusted: boolean,
-): Promise<EffectiveConfig> {
+export async function loadEffectiveConfig(globalPath: string, projectPath: string, projectTrusted: boolean): Promise<EffectiveConfig> {
   if (projectTrusted) {
     const projectConfig = await readConfig(projectPath);
     if (projectConfig.kind === "invalid") {

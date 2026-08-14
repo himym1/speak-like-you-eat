@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { REWRITE_TIMEOUT_MS, buildRewriteContext, completeRewrite } from "../src/model-rewrite.ts";
+import { buildRewriteContext, completeRewrite, REWRITE_TIMEOUT_MS } from "../src/model-rewrite.ts";
 
 const request = {
   context: [

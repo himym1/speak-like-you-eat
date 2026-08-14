@@ -1,4 +1,4 @@
-import { buildManifest, writeManifest, type BenchmarkManifest } from "./manifest.ts";
+import { type BenchmarkManifest, buildManifest, writeManifest } from "./manifest.ts";
 import {
   buildPhaseTwoManifest,
   PHASE_TWO_PROMPT_VARIANT_ID,
@@ -7,7 +7,7 @@ import {
   writePhaseTwoManifest,
 } from "./phase-2.ts";
 import { readLocalResults, writeBlindReport } from "./report.ts";
-import { PHASE_ONE_SUITE, PRODUCTION_WORK_DIRECTORY, runBenchmark, type BenchmarkSuite } from "./runner.ts";
+import { type BenchmarkSuite, PHASE_ONE_SUITE, PRODUCTION_WORK_DIRECTORY, runBenchmark } from "./runner.ts";
 
 const [command, ...arguments_] = process.argv.slice(2);
 

@@ -1,12 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { serializeContext, type RewriteRequest } from "./rewrite.ts";
+import { type RewriteRequest, serializeContext } from "./rewrite.ts";
 
 export const REWRITE_TIMEOUT_MS = 45_000;
 
-export type RewriteOutcome =
-  | { kind: "success"; display: string }
-  | { kind: "cancelled" }
-  | { kind: "failed" };
+export type RewriteOutcome = { kind: "success"; display: string } | { kind: "cancelled" } | { kind: "failed" };
 
 type RewriteContext = {
   systemPrompt: string;

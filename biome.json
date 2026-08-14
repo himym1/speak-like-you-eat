@@ -1,0 +1,48 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "src/**/*.ts",
+      "benchmark/**/*.ts",
+      "test/**/*.ts",
+      "package.json",
+      "tsconfig.json",
+      "biome.json",
+      ".pi/**/*.json",
+      ".pandino/**/*.json",
+      "benchmark/openrouter-prices.json",
+      "!!benchmark/manifest.json",
+      "!!benchmark/phase-2-manifest.json",
+      "!!benchmark/.work",
+      "!!**/*.md",
+      "!!package-lock.json",
+      "!!node_modules",
+      "!!**/*.tgz"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 140
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended"
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
+}

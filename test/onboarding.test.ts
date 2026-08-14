@@ -28,10 +28,7 @@ function createExtension(): {
     on(event: string, handler: unknown) {
       if (event === "session_start") {
         startSession = async (ctx) => {
-          await (handler as (event: { type: "session_start" }, context: ExtensionContext) => Promise<void>)(
-            { type: "session_start" },
-            ctx,
-          );
+          await (handler as (event: { type: "session_start" }, context: ExtensionContext) => Promise<void>)({ type: "session_start" }, ctx);
         };
       }
     },
@@ -106,8 +103,11 @@ test("chooses authenticated scoped models or all available models, then deduplic
   const unavailable = model("alpha", "three");
 
   assert.deepEqual(
-    selectModelCandidates([{ model: beta }, { model: alpha }, { model: beta }, { model: unavailable }], [alpha], (candidate) => candidate !== unavailable)
-      .map(({ label }) => label),
+    selectModelCandidates(
+      [{ model: beta }, { model: alpha }, { model: beta }, { model: unavailable }],
+      [alpha],
+      (candidate) => candidate !== unavailable,
+    ).map(({ label }) => label),
     ["alpha / one", "beta / two"],
   );
   assert.deepEqual(
@@ -414,7 +414,8 @@ test("global model selection removes a confirmed trusted project file and preser
   assert.deepEqual(cancelled.confirmationMessages, [
     {
       title: "Project SLYE configuration",
-      message: "The project file takes precedence over and blocks the global setting in this project. Remove it and use the global setting?",
+      message:
+        "The project file takes precedence over and blocks the global setting in this project. Remove it and use the global setting?",
     },
   ]);
 

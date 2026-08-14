@@ -100,10 +100,7 @@ function findFinalAssistantMessage(messages: readonly AgentMessage[]): Assistant
   return undefined;
 }
 
-function findTargetEntry(
-  branch: readonly SessionEntry[],
-  target: AssistantMessage,
-): SessionMessageEntry | undefined {
+function findTargetEntry(branch: readonly SessionEntry[], target: AssistantMessage): SessionMessageEntry | undefined {
   for (let index = branch.length - 1; index >= 0; index -= 1) {
     const entry = branch[index];
     if (entry?.type !== "message" || entry.message.role !== "assistant") {
@@ -138,7 +135,12 @@ function buildPriorContext(branch: readonly SessionEntry[], targetEntryId: strin
     return [];
   }
 
-  const firstTurnIndex = userIndexes[Math.max(0, userIndexes.length - 2)]!;
+  const firstTurnIndex = userIndexes[Math.max(0, userIndexes.length - 2)];
+  // The non-empty check above makes this a type-safety fallback.
+  if (firstTurnIndex === undefined) {
+    return [];
+  }
+
   const context: ContextMessage[] = [];
   for (const entry of entriesBeforeTarget.slice(firstTurnIndex)) {
     const message = getContextMessage(entry);

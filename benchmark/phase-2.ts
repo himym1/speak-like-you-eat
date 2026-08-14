@@ -2,12 +2,7 @@ import { fileURLToPath } from "node:url";
 import { buildRewriteContext } from "../src/model-rewrite.ts";
 import type { RewriteRequest } from "../src/rewrite.ts";
 import { BENCHMARK_CORPUS, type BenchmarkFixture } from "./corpus.ts";
-import {
-  buildManifestFor,
-  writeManifest,
-  type BenchmarkManifest,
-  type BenchmarkSuiteMetadata,
-} from "./manifest.ts";
+import { type BenchmarkManifest, type BenchmarkSuiteMetadata, buildManifestFor, writeManifest } from "./manifest.ts";
 import { BENCHMARK_CANDIDATES, type BenchmarkCandidate } from "./matrix.ts";
 import type { BenchmarkSuite } from "./runner.ts";
 

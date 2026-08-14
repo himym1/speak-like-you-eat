@@ -167,7 +167,11 @@ test("does not call a model outside TUI or with missing, disabled, or unusable c
   const directory = await setupConfiguredDirectory(t, true);
   const target = longAssistant();
   const branch = [entry("user", user("please explain")), entry("target", target)];
-  const configPath = join(process.env.PI_CODING_AGENT_DIR!, "slye.json");
+  const agentDirectory = process.env.PI_CODING_AGENT_DIR;
+  if (agentDirectory === undefined) {
+    throw new Error("Test agent directory is not configured.");
+  }
+  const configPath = join(agentDirectory, "slye.json");
 
   const outside = createExtension();
   const outsideContext = createContext({ cwd: directory, branch, mode: "print" });

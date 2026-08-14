@@ -32,13 +32,22 @@ While the secondary request runs, Pi shows `Rewriting AI-speak…`. Escape cance
 
 ## Development and sandbox
 
-Requires Node 24+ and Pi.
+Requires Node 24+ and Pi. In a Git clone, `npm ci` installs the development dependencies and Lefthook's pre-commit hook.
 
 ```sh
 npm ci
-npm run check
-npm pack --dry-run --json
+npm run format       # write Biome formatting
+npm run lint         # run Biome linting
+npm run biome:check  # run Biome checks without writing
+npm run typecheck    # run TypeScript checks
+npm test             # run Node tests
+npm run check        # run Biome checks, TypeScript checks, and tests
+npm pack --dry-run --json  # inspect the package
 ```
+
+Pre-commit runs Biome on staged supported files, re-stages its fixes, then runs the full typecheck and Node test suite. The hook stops at the first failure. If install scripts were disabled, recover it with `npx lefthook install`. In an emergency, bypass the hook with `git commit --no-verify`.
+
+Hooks complement, rather than replace, manual checks and any checks run elsewhere; use `npm run check` before sharing changes.
 
 The durable sibling sandbox is `../speak_like_you_eat_sandbox`. Its package listing and manual TUI checks are documented in the sandbox runbook; the no-request listing command is:
 

@@ -1,22 +1,22 @@
-import {
-  CONFIG_DIR_NAME,
-  getAgentDir,
-  getMarkdownTheme,
-  type ExtensionAPI,
-  type ExtensionCommandContext,
-  type ExtensionContext,
-} from "@earendil-works/pi-coding-agent";
-import { Box, Markdown, Text } from "@earendil-works/pi-tui";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  CONFIG_DIR_NAME,
+  type ExtensionAPI,
+  type ExtensionCommandContext,
+  type ExtensionContext,
+  getAgentDir,
+  getMarkdownTheme,
+} from "@earendil-works/pi-coding-agent";
+import { Box, Markdown, Text } from "@earendil-works/pi-tui";
+import {
   CONFIG_FILENAME,
-  loadEffectiveConfig,
-  readConfig,
-  writeConfigAtomically,
   type EffectiveConfig,
+  loadEffectiveConfig,
   type ModelReference,
+  readConfig,
   type SlyeConfig,
+  writeConfigAtomically,
 } from "./config.ts";
 import { completeRewrite, type RewriteOutcome } from "./model-rewrite.ts";
 import { prepareRewriteRequest } from "./rewrite.ts";
@@ -210,17 +210,18 @@ export default function speakLikeYouEat(pi: ExtensionAPI): void {
 }
 
 async function chooseAndSaveModel(ctx: ExtensionCommandContext): Promise<void> {
-  const candidates = selectModelCandidates(
-    ctx.scopedModels,
-    ctx.modelRegistry.getAvailable(),
-    (model) => ctx.modelRegistry.hasConfiguredAuth(model),
+  const candidates = selectModelCandidates(ctx.scopedModels, ctx.modelRegistry.getAvailable(), (model) =>
+    ctx.modelRegistry.hasConfiguredAuth(model),
   );
   if (candidates.length === 0) {
     ctx.ui.notify("No authenticated models are available for SLYE.", "warning");
     return;
   }
 
-  const selectedLabel = await ctx.ui.select("Choose a SLYE model", candidates.map((candidate) => candidate.label));
+  const selectedLabel = await ctx.ui.select(
+    "Choose a SLYE model",
+    candidates.map((candidate) => candidate.label),
+  );
   if (selectedLabel === undefined) {
     return;
   }
@@ -335,12 +336,7 @@ async function turnOn(ctx: ExtensionCommandContext): Promise<void> {
   await chooseAndSaveModel(ctx);
 }
 
-async function saveEnabledConfig(
-  ctx: ExtensionCommandContext,
-  path: string,
-  model: ModelReference,
-  scope: string,
-): Promise<void> {
+async function saveEnabledConfig(ctx: ExtensionCommandContext, path: string, model: ModelReference, scope: string): Promise<void> {
   try {
     await writeConfigAtomically(path, { enabled: true, model });
   } catch {

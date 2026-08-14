@@ -1,5 +1,5 @@
 import { randomInt } from "node:crypto";
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { serializeContext } from "../src/rewrite.ts";
 import { BENCHMARK_CORPUS, type BenchmarkFixture } from "./corpus.ts";
@@ -142,10 +142,13 @@ function countOccurrences(text: string, literal: string): number {
 function shuffle(values: string[], randomIndex: RandomIndex): void {
   for (let index = values.length - 1; index > 0; index -= 1) {
     const selected = randomIndex(index + 1);
-    if (!Number.isInteger(selected) || selected < 0 || selected > index) {
+    const selectedValue = values[selected];
+    const currentValue = values[index];
+    if (!Number.isInteger(selected) || selectedValue === undefined || currentValue === undefined) {
       throw new Error("Random candidate index is outside the shuffle range.");
     }
-    [values[index], values[selected]] = [values[selected]!, values[index]!];
+
+    [values[index], values[selected]] = [selectedValue, currentValue];
   }
 }
 
@@ -175,11 +178,7 @@ function nextCandidateNumber(mapping: Readonly<Record<string, string>>): number 
   return largestNumber + 1;
 }
 
-function formatFixture(
-  fixture: BenchmarkFixture,
-  results: readonly BenchmarkResult[],
-  mapping: Readonly<Record<string, string>>,
-): string {
+function formatFixture(fixture: BenchmarkFixture, results: readonly BenchmarkResult[], mapping: Readonly<Record<string, string>>): string {
   const candidates = results
     .map((result) => ({ result, label: mapping[`${result.canonicalModel}#${result.requestedThinking}`] ?? "Candidate ??" }))
     .sort((left, right) => left.label.localeCompare(right.label));

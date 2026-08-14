@@ -5,12 +5,12 @@ import { buildRewriteContext } from "../src/model-rewrite.ts";
 import type { RewriteRequest } from "../src/rewrite.ts";
 import { BENCHMARK_CORPUS, type BenchmarkFixture, verifyCorpusInvariants } from "./corpus.ts";
 import {
-  BENCHMARK_CANDIDATES,
-  validateCandidateMatrix,
   type ActualThinking,
+  BENCHMARK_CANDIDATES,
   type BenchmarkCandidate,
   type ProviderThinking,
   type RequestedThinking,
+  validateCandidateMatrix,
 } from "./matrix.ts";
 
 export const OUTPUT_TOKEN_CEILING = 8_192;
