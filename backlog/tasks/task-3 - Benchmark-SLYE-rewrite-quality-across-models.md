@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@zambo'
 created_date: '2026-08-14 01:54'
-updated_date: '2026-08-14 03:27'
+updated_date: '2026-08-14 11:26'
 labels: []
 dependencies: []
 references:
@@ -50,4 +50,8 @@ Build a reproducible evaluation of SLYE rewrite quality across several authentic
 User approval remains: the canonical model list and distinct-level fallback policy; a six-fixture all-English public corpus; the current production prompt baseline; sequential calls with a 45-second deadline and 8,192-token cap; public OpenRouter-equivalent pricing; no judge calls; blind human review; and strict isolation from agent, session, project, and tool context.
 
 Final pre-approval validation: manifest fingerprint `80d7d401fe9862d3d558efc4ba8b674014dd3e7e975f02d77cc3b37c30fbd759`; Budget with estimated input and maximum output: USD 1.59740162; Conservative maximum OpenRouter-equivalent cost: USD 1.63969394. `node --test test/benchmark.test.ts` passed (18 tests), `npm run check` passed (52 tests), and `npm run benchmark:dry-run` produced a deterministic 108-row manifest without runtime, network, or model/completion calls. No model/completion calls ran.
+
+Execution approval: the user explicitly approved running the exact 108-call manifest fingerprint `80d7d401fe9862d3d558efc4ba8b674014dd3e7e975f02d77cc3b37c30fbd759` with conservative OpenRouter-equivalent ceiling USD 1.63969394. No prompt variant or extra judge call is approved.
+
+Approved phase-one execution completed for the exact fingerprint: 108/108 rows were successful with stop reason `stop`; no timeout, provider error, or runner stop occurred. Provider-reported totals: 54,871 input, 41,325 output, 3,196 reasoning, 96,196 total, zero cache read/write tokens. Sum of call latency was 547,647 ms; median 3,847 ms; maximum 34,797 ms. Usage-based OpenRouter-equivalent cost was USD 0.01310292; actual provider billing or quota accounting can differ. Mechanical checks found zero literal/Markdown/fence damage signals, zero preambles, zero length-limit failures, four unchanged allowed outputs, and eight forbidden-phrase hits requiring review. The ignored blind report and stable mapping were generated under `benchmark/.work/`; identities have not been revealed. Blind human scoring remains pending. No judge-model or prompt-variant call ran.
 <!-- SECTION:NOTES:END -->
