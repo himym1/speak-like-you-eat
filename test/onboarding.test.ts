@@ -375,6 +375,31 @@ test("startup warns once for invalid configuration, warns for unusable models, a
     { message: "SLYE's selected model is unavailable. Run /slye model.", type: "warning" },
   ]);
 
+  const noSupportedThinkingLevelModel = {
+    ...model("openai", "gpt-5"),
+    reasoning: true,
+    thinkingLevelMap: {
+      off: null,
+      minimal: null,
+      low: null,
+      medium: null,
+      high: null,
+      xhigh: null,
+      max: null,
+    },
+  } as PiModel;
+  const noSupportedThinkingLevelSession = createContext({
+    cwd: join(directory, "no-supported-thinking-level"),
+    models: [noSupportedThinkingLevelModel],
+    authenticated: () => true,
+  });
+  await createExtension().startSession(noSupportedThinkingLevelSession.context);
+  assert.deepEqual(noSupportedThinkingLevelSession.notifications, [
+    { message: "SLYE's selected model is unavailable. Run /slye model.", type: "warning" },
+  ]);
+  assert.deepEqual(noSupportedThinkingLevelSession.selectedTitles, []);
+  assert.deepEqual(noSupportedThinkingLevelSession.confirmationMessages, []);
+
   await writeConfigAtomically(globalPath, { enabled: false, model: configuredModel });
   const disabledSession = createContext({ cwd: join(directory, "disabled") });
   await createExtension().startSession(disabledSession.context);

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -64,14 +64,30 @@ function createContext(options: {
   branch: SessionEntry[];
   mode?: "tui" | "print";
   modelUsable?: boolean;
+  malformedThinking?: boolean;
   signal?: AbortSignal;
   complete?: Completion;
   throwWhenReadingBranch?: boolean;
-}): { context: ExtensionContext; notifications: Notification[]; workingMessages: Array<string | undefined>; completionCalls: number } {
+}): {
+  context: ExtensionContext;
+  notifications: Notification[];
+  workingMessages: Array<string | undefined>;
+  completionCalls: number;
+  findCalls: number;
+} {
   const notifications: Notification[] = [];
   const workingMessages: Array<string | undefined> = [];
   let completionCalls = 0;
-  const model = { provider: "test", id: "model" };
+  let findCalls = 0;
+  const model = {
+    provider: "test",
+    id: "model",
+    baseUrl: "https://model.example.test",
+    reasoning: options.malformedThinking ?? false,
+    thinkingLevelMap: options.malformedThinking
+      ? { off: null, minimal: null, low: null, medium: null, high: null, xhigh: null, max: null }
+      : undefined,
+  };
   const complete = options.complete ?? (async () => response("stop", [text("Plain response.")]));
   const context = {
     mode: options.mode ?? "tui",
@@ -95,15 +111,23 @@ function createContext(options: {
     },
     modelRegistry: {
       find() {
+        findCalls += 1;
         return options.modelUsable === false ? undefined : model;
       },
       hasConfiguredAuth() {
         return options.modelUsable !== false;
       },
-      async complete(selectedModel: unknown, request: unknown, requestOptions: { signal: AbortSignal }) {
-        assert.equal(selectedModel, model);
-        completionCalls += 1;
-        return complete(selectedModel, request, requestOptions);
+      getProvider() {
+        return {
+          streamSimple(selectedModel: unknown, request: unknown, requestOptions: { signal: AbortSignal }) {
+            assert.strictEqual(selectedModel, model);
+            completionCalls += 1;
+            return { result: () => complete(selectedModel, request, requestOptions) };
+          },
+        };
+      },
+      async getApiKeyAndHeaders() {
+        return { ok: true };
       },
     },
     isProjectTrusted() {
@@ -117,6 +141,9 @@ function createContext(options: {
     workingMessages,
     get completionCalls() {
       return completionCalls;
+    },
+    get findCalls() {
+      return findCalls;
     },
   };
 }
@@ -147,8 +174,10 @@ test("calls the configured authenticated model once with an isolated exact rewri
   assert.deepEqual(extension.appendedEntries[0]?.data, { display: "Prima parte.\n\nSeconda parte." });
   assert.equal(extension.sendMessageCalls, 0);
   assert.equal(testContext.completionCalls, 1);
+  assert.equal(testContext.findCalls, 1);
   assert.deepEqual(testContext.notifications, []);
   assert.deepEqual(testContext.workingMessages, ["Rewriting AI-speak…", undefined]);
+  assert.deepEqual(Object.keys(receivedContext ?? {}).sort(), ["messages", "systemPrompt"]);
   assert.equal(receivedContext?.messages.length, 1);
   assert.equal(receivedContext?.messages[0]?.role, "user");
   assert.equal(
@@ -207,6 +236,25 @@ test("does not call a model outside TUI or with missing, disabled, or unusable c
     assert.equal(testContext.completionCalls, 0);
     assert.deepEqual(extension.appendedEntries, []);
   }
+});
+
+test("does not dispatch a saved model with malformed thinking metadata or change its configuration", async (t) => {
+  const directory = await setupConfiguredDirectory(t, true);
+  const target = longAssistant();
+  const configPath = join(process.env.PI_CODING_AGENT_DIR ?? "", "slye.json");
+  const savedConfig = await readFile(configPath, "utf8");
+  const extension = createExtension();
+  const testContext = createContext({
+    cwd: directory,
+    branch: [entry("user", user("please explain")), entry("target", target)],
+    malformedThinking: true,
+  });
+
+  await extension.endAgent({ type: "agent_end", messages: [target] } as AgentEndEvent, testContext.context);
+
+  assert.equal(testContext.completionCalls, 0);
+  assert.deepEqual(extension.appendedEntries, []);
+  assert.equal(await readFile(configPath, "utf8"), savedConfig);
 });
 
 test("processes a duplicate target event only once", async (t) => {

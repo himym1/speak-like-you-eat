@@ -26,6 +26,7 @@ const PACKED_FILES = [
   "package.json",
   "src/config.ts",
   "src/index.ts",
+  "src/model-completion.ts",
   "src/model-rewrite.ts",
   "src/rewrite.ts",
 ];

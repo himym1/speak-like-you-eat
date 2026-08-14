@@ -18,6 +18,7 @@ import {
   type SlyeConfig,
   writeConfigAtomically,
 } from "./config.ts";
+import { completeModel, lowestSupportedThinkingLevel } from "./model-completion.ts";
 import { completeRewrite, type RewriteOutcome } from "./model-rewrite.ts";
 import { prepareRewriteRequest } from "./rewrite.ts";
 
@@ -32,7 +33,7 @@ type SlyePaths = {
   project: string;
 };
 
-type PiModel = ReturnType<ExtensionContext["modelRegistry"]["getAvailable"]>[number];
+type PiModel = NonNullable<ReturnType<ExtensionContext["modelRegistry"]["find"]>>;
 type RewriteEntryData = { display: string };
 
 export type ModelCandidate = {
@@ -109,7 +110,7 @@ export default function speakLikeYouEat(pi: ExtensionAPI): void {
     if (!effectiveConfig.config.enabled) {
       return;
     }
-    if (!hasUsableModel(ctx, effectiveConfig.config.model)) {
+    if (resolveUsableModel(ctx, effectiveConfig.config.model) === undefined) {
       notifyStartupWarning(ctx, "SLYE's selected model is unavailable. Run /slye model.");
     }
   });
@@ -125,8 +126,8 @@ export default function speakLikeYouEat(pi: ExtensionAPI): void {
         return;
       }
 
-      const model = ctx.modelRegistry.find(effectiveConfig.config.model.provider, effectiveConfig.config.model.id);
-      if (model === undefined || !ctx.modelRegistry.hasConfiguredAuth(model)) {
+      const model = resolveUsableModel(ctx, effectiveConfig.config.model);
+      if (model === undefined) {
         return;
       }
 
@@ -140,7 +141,7 @@ export default function speakLikeYouEat(pi: ExtensionAPI): void {
       let outcome: RewriteOutcome;
       try {
         outcome = await completeRewrite(prepared.request, ctx.signal, (request, options) =>
-          ctx.modelRegistry.complete(model, request, options),
+          completeModel(ctx.modelRegistry, model, request, options),
         );
       } finally {
         ctx.ui.setWorkingMessage();
@@ -326,7 +327,7 @@ async function turnOn(ctx: ExtensionCommandContext): Promise<void> {
   }
   if (effectiveConfig.kind === "valid" && effectiveConfig.config.model !== undefined) {
     const model = effectiveConfig.config.model;
-    if (hasUsableModel(ctx, model)) {
+    if (resolveUsableModel(ctx, model) !== undefined) {
       const scope = effectiveConfig.scope === "project" ? MODEL_SCOPE_PROJECT : MODEL_SCOPE_ALL;
       await saveEnabledConfig(ctx, effectiveConfig.path, model, scope);
       return;
@@ -370,9 +371,19 @@ function getConfigPaths(ctx: ExtensionContext): SlyePaths {
   };
 }
 
-function hasUsableModel(ctx: ExtensionContext, reference: ModelReference): boolean {
+function resolveUsableModel(ctx: ExtensionContext, reference: ModelReference): PiModel | undefined {
   const model = ctx.modelRegistry.find(reference.provider, reference.id);
-  return model !== undefined && ctx.modelRegistry.hasConfiguredAuth(model);
+  if (model === undefined) {
+    return undefined;
+  }
+  if (!ctx.modelRegistry.hasConfiguredAuth(model)) {
+    return undefined;
+  }
+  if (lowestSupportedThinkingLevel(model) === undefined) {
+    return undefined;
+  }
+
+  return model;
 }
 
 function formatModel(model: ModelReference): string {
