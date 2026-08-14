@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@zambo'
 created_date: '2026-08-13 23:04'
-updated_date: '2026-08-13 23:40'
+updated_date: '2026-08-14 00:13'
 labels: []
 dependencies: []
 references:
@@ -57,4 +57,10 @@ Backlog CLI 1.50.1 exposes decision create/list but no decision update/edit comm
 Architecture rationale temporarily recorded here because decision-1 cannot be populated through Backlog CLI 1.50.1: the MVP uses an appended display-only companion entry because Pi exposes no public API that can asynchronously hide or collapse a normal assistant row and later toggle it while preserving the stored/model-context message. Appending a custom entry leaves the original assistant response untouched, keeps the derived rewrite out of model context, persists across resume, and fails open structurally because a failed rewrite simply appends nothing. Rejected for the MVP: replacing the stored message and restoring originals through the context hook (history/context risk), a cached Markdown transformer (no public per-message invalidation for a reliable original/rewrite toggle), and overlay or split-pane UI (unnecessary interaction and complexity for the first version). When Backlog gains decision updates, move this rationale into decision-1.
 
 Initial repository scope: after the spec reviewer surfaced the pre-existing `.pi/`, `.pandino/`, and `AGENTS.md` workflow files as broader than the package-only slice, zambo explicitly chose on 2026-08-13 to version them in the repository so the project workflow remains reproducible.
+
+Manual slice-1 gate passed on 2026-08-13: from the sibling sandbox, Pi started successfully in offline TUI mode and listed the extension as `src`; no prompt or model request was submitted.
+
+Slice 2 configuration/onboarding implementation is ready for manual verification: typed slye.json validation and atomic persistence, trusted local-over-global precedence, TUI-only startup warning, and /slye model|on|off are covered by 11 Node tests. Automated checks passed on 2026-08-14; the sandbox manual configuration gate in doc-2 remains pending. No transcript, display, rewrite, model-completion, timeout, or cancellation behavior was added.
+
+Slice 2 review-required branch coverage was added for invalid effective files, trusted project precedence, startup variants, and global override confirmation.
 <!-- SECTION:NOTES:END -->

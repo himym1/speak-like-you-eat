@@ -3,13 +3,13 @@ id: doc-1
 title: SLYE MVP specification
 type: specification
 created_date: '2026-08-13 23:14'
-updated_date: '2026-08-13 23:19'
+updated_date: '2026-08-14 00:13'
 ---
 # SLYE MVP specification
 
 ## Status
 
-This document defines the approved **target MVP**. Slice 1 currently implements only the distributable Pi package foundation and its intentionally no-op extension entrypoint. No configuration, command, warning, transcript handling, rewriting, rendering, or model request exists yet.
+This document defines the approved **target MVP**. Slice 2 implements typed configuration and onboarding: validated atomic `slye.json` persistence, the TUI startup warning, and `/slye model|on|off`. Rewriting and display are not implemented: there is no transcript observation, custom entry renderer, rewrite stub, model request, loading indicator, timeout, or cancellation yet.
 
 ## Scope
 
@@ -18,11 +18,11 @@ SLYE operates only in Pi's interactive TUI. Outside the TUI it is a no-op.
 ## Configuration and onboarding
 
 - Configuration is stored in `slye.json` and validated before use.
-- A complete project-local configuration overrides the complete global configuration only when the project is trusted.
+- A complete project-local configuration overrides the complete global configuration only when the project is trusted. An invalid trusted project configuration blocks global fallback.
 - Configuration writes are atomic.
 - If no model is configured, Pi shows a yellow non-modal startup warning directing the user to `/slye model`; SLYE otherwise does no work.
 - `/slye model` opens an authenticated scoped-model picker that displays provider and model, then lets the user choose global or project scope.
-- `/slye on` and `/slye off` persist the enabled state. Enabling with no model opens model selection.
+- `/slye on` and `/slye off` persist the enabled state. Enabling with no model opens model selection. Neither command overwrites an invalid effective configuration file.
 
 ## Eligible responses and display
 

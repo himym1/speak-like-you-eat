@@ -3,7 +3,7 @@ id: doc-2
 title: SLYE sandbox manual checks
 type: guide
 created_date: '2026-08-13 23:14'
-updated_date: '2026-08-13 23:28'
+updated_date: '2026-08-14 00:13'
 ---
 # SLYE sandbox manual checks
 
@@ -37,6 +37,38 @@ This confirms the project-local package registration and path; it does not confi
 ```sh
 pi --approve --offline
 ```
+
+### Slice 2 — configuration and onboarding
+
+Do not change global Pi settings. Before starting, delete only `../speak_like_you_eat_sandbox/.pi/slye.json` if it exists. `This project only` appears only for a trusted project; `--approve` supplies that trust for the current run.
+
+First check whether Pi's agent directory already has `slye.json`:
+
+```sh
+ls "${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/slye.json"
+```
+
+If it exists, do not delete or modify it. Test the startup warning with a temporary isolated agent directory, or skip and report that case as preconfigured:
+
+```sh
+cd ../speak_like_you_eat_sandbox
+PI_CODING_AGENT_DIR="$(mktemp -d)" pi --approve
+```
+
+The isolated run has no authenticated models. Test model selection separately in a normal run so Pi can show authenticated models:
+
+```sh
+cd ../speak_like_you_eat_sandbox
+pi --approve
+```
+
+Do not submit a prompt or make a model request:
+
+1. In the isolated run, confirm the yellow non-modal warning directs you to `/slye model`.
+2. In a normal run, run `/slye model`, choose an authenticated candidate, then choose `This project only`.
+3. Exit Pi and verify `.pi/slye.json` contains the selected `provider` and `id` with `"enabled": true`.
+4. Start Pi again, run `/slye off`, and verify `.pi/slye.json` now has `"enabled": false` while retaining the model.
+5. Run `/slye on`, confirm it restores the saved model without opening a picker, then exit. Do not submit a prompt or make a model request at any point.
 
 ### Later slices
 
