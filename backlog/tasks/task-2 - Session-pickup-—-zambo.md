@@ -5,7 +5,7 @@ status: To Do
 assignee:
   - '@zambo'
 created_date: '2026-08-13 23:04'
-updated_date: '2026-08-14 11:27'
+updated_date: '2026-08-14 14:47'
 labels:
   - continuity
   - handoff
@@ -19,18 +19,18 @@ ordinal: 2000
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
 WHERE WE LEFT OFF
-2026-08-14. Branch `main` at commit `059969c` (`chore: record benchmark execution`); no Git remote is configured, so nothing is pushed. The tracked tree is clean. Product slices 1–5 and package hardening are committed through `627899c`; the reproducible approval-gated benchmark infrastructure is committed as `5ae891b`. Zambo explicitly approved fingerprint `80d7d401fe9862d3d558efc4ba8b674014dd3e7e975f02d77cc3b37c30fbd759` and its USD 1.63969394 conservative OpenRouter-equivalent ceiling. The approved phase-one run completed all 108 rows successfully with normal `stop`, no timeout/error, and no runner stop. Provider-reported totals were 54,871 input, 41,325 output, 3,196 reasoning, and 96,196 total tokens; usage-based OpenRouter-equivalent cost was USD 0.01310292. Mechanical checks found no literal/Markdown/fence damage, preamble, or length failure; four allowed unchanged outputs and eight forbidden-phrase hits remain for review. Durable task: TASK-3. Local ignored artifacts are in `benchmark/.work/`: 108 result JSON files, `blind-review.md`, and `blind-map.json`. The candidate mapping has not been revealed to the human.
+2026-08-14. Branch `main`; phase-two setup commit `2ce99b0` (`feat: add gated phase two prompt benchmark`) followed by the commit containing this pickup snapshot. No Git remote is configured, so nothing is pushed. The tracked tree is clean. Phase one completed 108/108 calls, blind human scores were locked at SHA-256 `bbe90c535ac1a0d0e243dc3f4f0cae6bf97955eb0302e1cebf88d8a9b732979e`, and aggregate findings are recorded in TASK-3. Based on those scores, the user approved preparing—but not executing—a phase-two improved-prompt comparison. The reviewed no-call setup uses only backup-cliche, inflated-prose, and clear-control with Terra off, GPT-OSS 120B low, and DeepSeek V4 off: nine rows, fingerprint `59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728`, estimated-input/output-ceiling budget USD 0.15991218, and conservative maximum OpenRouter-equivalent budget USD 0.16476768. Phase-one fingerprint remains `80d7d401fe9862d3d558efc4ba8b674014dd3e7e975f02d77cc3b37c30fbd759`; call IDs are disjoint. The complete improved prompt and subsets are fingerprinted in `benchmark/phase-2-manifest.json`. `npm run check` passes 55 tests, the tarball remains eight files, reviewers found no must-fix issues, and `benchmark/.work/phase-2/` does not exist. No phase-two runtime, network, or model call has run.
 
 WHAT'S NEXT
-1. Run `open benchmark/.work/blind-review.md` and review all outputs without opening `benchmark/.work/blind-map.json`.
-2. Record blind human scores separately from the generated report for simplification, cliché removal, semantic/factual fidelity, English fidelity, Markdown/code preservation, and preambles. Pay particular attention to the eight mechanically detected forbidden-phrase hits.
-3. After scoring is locked, reveal `benchmark/.work/blind-map.json`, aggregate results by model/thinking configuration, and publish evidence-backed recommendations in TASK-3/current docs as appropriate.
-4. If evidence warrants an improved prompt comparison, propose its exact failed-case/model matrix and budget and wait for separate approval before any additional model call.
-5. Finalize TASK-3 through the Backlog finalization workflow, then finish TASK-1 acceptance verification, docs review, final review, and MVP closure.
+1. Obtain zambo's explicit approval for phase-two fingerprint `59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728` and conservative OpenRouter-equivalent budget USD 0.16476768.
+2. Only after approval, run `npm run benchmark:phase-2:run -- --approve 59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728`.
+3. Verify nine settled rows, record usage/cost, run `npm run benchmark:phase-2:report`, create a separate scored copy with nine placeholders, and keep `benchmark/.work/phase-2/blind-map.json` hidden until human scores are locked.
+4. Reveal and compare each phase-two result against its matching phase-one baseline. If the prompt variant wins without fidelity/safety regressions, apply the three instructions to the production prompt with focused tests and manual sandbox verification; otherwise retain the phase-one prompt.
+5. Publish aggregate recommendations, finalize TASK-3 through the Backlog finalization workflow, then complete TASK-1 docs/final reviews and MVP closure.
 
 WAITING ON / GATED BY
-As of 2026-08-14, TASK-3 and therefore TASK-1 are gated by zambo's blind human quality review. No credentials or provider service are blocking. No judge-model call or prompt-variant call is approved.
+As of 2026-08-14, phase-two execution is gated only by zambo's explicit approval of the exact fingerprint and USD 0.16476768 conservative budget. The prior approval covered setup and dry-run only. No judge-model or additional matrix call is approved.
 
 VERIFY
-Run `git status -sb`; `git log --oneline -5`; `find benchmark/.work -maxdepth 1 -type f -name '*.json' ! -name 'blind-map.json' | wc -l` (expect 108); `jq -r '.outcome' benchmark/.work/[0-9a-f]*.json | sort | uniq -c` (expect 108 success); `npm run check` (expect 52 passing tests); and `npm run benchmark:dry-run | tail -4` (expect 108 rows and the approved fingerprint/budgets; this makes no model call).
+Run `git status -sb`; `git log --oneline -5`; `npm run check`; `npm run benchmark:dry-run | tail -4`; `npm run benchmark:phase-2:dry-run | tail -13`; `test ! -e benchmark/.work/phase-2`; and `npm pack --dry-run --json` to confirm the eight-file package. Both dry-runs are no-call operations.
 <!-- SECTION:DESCRIPTION:END -->
