@@ -20,13 +20,15 @@ Run the project-local command only in a trusted project; after reviewing and tru
 
 ## Configure and use
 
-Run `/slye model` once to choose an authenticated Pi model and save it globally or, for a trusted project, locally. `/slye on` restores a usable saved model or opens that picker; `/slye off` saves an explicitly disabled configuration.
+Run `/slye model` to search authenticated eligible Pi models and save one globally or, for a trusted project, locally. The picker shows SLYE's enforced thinking level, starts with eligible scoped models when available, and uses Tab to switch to all authenticated eligible models; Esc or Ctrl-C cancels without writing. `/slye on` restores a usable saved model or opens the picker; `/slye off` saves an explicitly disabled configuration.
 
-The global configuration is `${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/slye.json`. In a trusted project, `.pi/slye.json` completely overrides it; an invalid trusted project file blocks global fallback.
+SLYE always derives the selected model's lowest currently supported thinking level and never exposes or saves a thinking setting. Models with no valid level cannot be selected; a saved model that loses valid metadata fails open. Cost and latency follow the model choice.
+
+The global configuration is `${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/slye.json`. In a trusted project, `.pi/slye.json` completely overrides it; an invalid trusted project file blocks global fallback. The schema saves only `enabled` and model provider/id.
 
 SLYE rewrites only normally completed final assistant responses with at least 200 non-whitespace prose characters after fenced code is excluded. It skips intermediate, aborted, errored, truncated, tool-call, thinking, and tool-result content.
 
-Each eligible response makes one isolated secondary request. Model quality can vary, and already-clear prose may be returned unchanged. The [benchmark results](backlog/docs/specs/doc-4%20-%20SLYE-benchmark-results.md) contain the full aggregate tables; on the fixed public benchmark, `openai-codex/gpt-5.6-terra` produced the strongest rewrites while `ollama-cloud/deepseek-v4-flash:0731` was about three times faster, and higher thinking levels did not reliably help. These are small-corpus measurements, not universal provider guarantees.
+Each eligible response makes one isolated secondary request directly to the effective provider. SLYE supplies only its rewrite system prompt and one user message with bounded selected chat context and the target; it does not load project instructions, skills, prompts, tools, files, or full session history, and does not change Pi's active model or thinking. This boundary covers only data and behavior SLYE supplies: other installed extensions and provider-side processing are outside its control. Model quality can vary, and already-clear prose may be returned unchanged. The [benchmark results](backlog/docs/specs/doc-4%20-%20SLYE-benchmark-results.md) contain the full aggregate tables; on the fixed public benchmark, `openai-codex/gpt-5.6-terra` produced the strongest rewrites while `ollama-cloud/deepseek-v4-flash:0731` was about three times faster. These are small-corpus measurements, not universal provider guarantees.
 
 While the secondary request runs, Pi shows `Rewriting AI-speak…`. Escape cancels it silently. SLYE stops waiting after a local 45-second deadline, leaves the original response alone, and shows at most one fail-open warning per session for timeout or other failures. A non-cooperative provider may continue and consume usage after local cancellation or timeout.
 

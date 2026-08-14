@@ -3,7 +3,7 @@ id: doc-2
 title: SLYE sandbox manual checks
 type: guide
 created_date: '2026-08-13 23:14'
-updated_date: '2026-08-14 02:04'
+updated_date: '2026-08-14 20:26'
 ---
 # SLYE sandbox manual checks
 
@@ -70,6 +70,40 @@ Do not submit a prompt or make a model request:
 4. Start Pi again, run `/slye off`, and verify `.pi/slye.json` now has `"enabled": false` while retaining the model.
 5. Run `/slye on`, confirm it restores the saved model without opening a picker, then exit. Do not submit a prompt or make a model request at any point.
 
+### TASK-1.1 — model picker and automatic thinking (no model call)
+
+Run this check in the normal authenticated sandbox, not the isolated agent-directory run. Do not submit a prompt or make a model request at any point in this section.
+
+```sh
+cd ../speak_like_you_eat_sandbox
+before="$(mktemp)"
+had_project_config=0
+if test -f .pi/slye.json; then
+  cp .pi/slye.json "$before"
+  had_project_config=1
+  cat "$before"
+else
+  printf '%s\n' '.pi/slye.json is absent'
+fi
+pi --approve
+if test "$had_project_config" -eq 1; then
+  cmp "$before" .pi/slye.json
+else
+  test ! -e .pi/slye.json
+fi
+comparison_status=$?
+rm "$before"
+test "$comparison_status" -eq 0
+```
+
+1. Record the command output above before changing anything. Run `/slye model`. Confirm each candidate row shows provider, model, and `thinking: <level>`, then search by provider, model ID, or model name.
+2. When the normal session has eligible authenticated scoped candidates, confirm the picker starts at Scoped models. Press Tab to show All authenticated models, then press Tab again to return to Scoped models; confirm the search remains. If there are no scoped candidates, confirm it starts at All authenticated models and Tab does not offer a scope switch.
+3. Press Esc or Ctrl-C to cancel, then exit Pi. The remaining shell commands compare `.pi/slye.json` with its pre-launch state, remove the temporary copy, and return a failure status if cancellation wrote anything.
+4. Reopen Pi, run `/slye model`, select a candidate, choose `This project only`, then exit. Inspect `.pi/slye.json` and confirm it contains only `enabled` and model `provider`/`id`, with no `thinking` field.
+5. Reopen Pi, run `/slye off`, then `/slye on`. Confirm the enable notification repeats the selected provider/model and its recomputed `thinking: <level>`. Exit without submitting a prompt or making a model request.
+
+A terminal check cannot observe SLYE's provider payload. Automated evidence is `test/display.test.ts`'s `calls the configured authenticated model once with an isolated exact rewrite payload` and `test/model-rewrite.test.ts`'s `builds one isolated user message with labelled context, the complete target, and the promoted prompt`; run `npm test` to exercise them.
+
 ### Slice 4 — real rewrite, cancellation, and resume
 
 Use the existing sandbox project `.pi/slye.json` created during the slice-2 check; do not edit or delete it. Run:
@@ -94,7 +128,7 @@ npm run check
 npm pack --dry-run --json
 ```
 
-The dry run must include `README.md`, `package.json`, the `src/` files, `backlog/docs/specs/doc-1 - SLYE-MVP-specification.md`, and `backlog/docs/runbooks/doc-2 - SLYE-sandbox-manual-checks.md`. It must exclude `test/`, `backlog/tasks/`, `backlog/decisions/`, `AGENTS.md`, `.pi/`, `.pandino/`, and sandbox data.
+The dry run must include `README.md`, `package.json`, the shipped `src/` files including `model-completion.ts` and `model-picker.ts`, and the packaged specification, benchmark-results, and sandbox-runbook documents (`doc-1`, `doc-4`, and `doc-2`). It must exclude `test/`, `backlog/tasks/`, `backlog/decisions/`, `AGENTS.md`, `.pi/`, `.pandino/`, and sandbox data.
 
 Confirm the sandbox still lists its local source package:
 

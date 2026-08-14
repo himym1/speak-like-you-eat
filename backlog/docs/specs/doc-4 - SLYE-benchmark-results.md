@@ -3,7 +3,7 @@ id: doc-4
 title: SLYE benchmark results
 type: specification
 created_date: '2026-08-14 17:23'
-updated_date: '2026-08-14 17:52'
+updated_date: '2026-08-14 20:26'
 ---
 # SLYE benchmark results
 
@@ -87,4 +87,4 @@ Prices are public OpenRouter snapshot comparative estimates only. Aggregate and 
 | Low latency | DeepSeek V4 Flash (ollama-cloud/deepseek-v4-flash:0731), off | About one-third of Terra's mean latency across both phases; lower promoted Q than Terra. |
 | Cost-oriented | GPT-OSS 120B (ollama-cloud/gpt-oss:120b), low | Lowest promoted three-call estimate; tied DeepSeek on promoted Q but prompt-sensitive. |
 
-SLYE currently selects a model but does not expose a thinking level, so the thinking labels describe evidence rather than a user-facing control.
+The table's thinking labels record explicit tested configurations, not user-selectable SLYE controls; the runtime level is derived from current model metadata.

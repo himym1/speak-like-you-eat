@@ -3,7 +3,7 @@ id: doc-1
 title: SLYE MVP specification
 type: specification
 created_date: '2026-08-13 23:14'
-updated_date: '2026-08-14 17:25'
+updated_date: '2026-08-14 20:32'
 ---
 # SLYE MVP specification
 
@@ -17,12 +17,14 @@ SLYE operates only in Pi's interactive TUI. Outside the TUI it is a no-op.
 
 ## Configuration and onboarding
 
-- Configuration is stored in `slye.json` and validated before use.
+- Configuration is stored in `slye.json`, validated before use, and contains only `enabled` plus the selected model's `provider` and `id`; it never contains a thinking setting.
 - A complete project-local configuration overrides the complete global configuration only when the project is trusted. An invalid trusted project configuration blocks global fallback.
 - Configuration writes are atomic.
 - If no model is configured, Pi shows a yellow non-modal startup warning directing the user to `/slye model`; SLYE otherwise does no work.
-- `/slye model` opens an authenticated scoped-model picker that displays provider and model, then lets the user choose global or project scope.
-- `/slye on` and `/slye off` persist the enabled state. Enabling with no model opens model selection. Neither command overwrites an invalid effective configuration file.
+- `/slye model` opens a custom searchable picker showing each authenticated eligible provider/model and its automatically enforced thinking level. It opens on eligible authenticated scoped models when any exist; otherwise it opens on all authenticated eligible models.
+- When scoped candidates exist, Tab switches non-persistently between scoped and all authenticated eligible models and preserves the search. Each picker invocation resets to its default scope. Esc or Ctrl-C cancels without writing. After selection, the existing global or trusted-project save scope remains available.
+- SLYE derives the first currently supported model level in this exact order: `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`. It ignores a scoped model entry's pinned thinking level. A model whose metadata exposes no supported level cannot be selected; if a saved model loses valid level metadata, SLYE fails open. A reasoning-only model therefore runs at its minimum (for example, `high`), with cost and latency determined by that model choice.
+- `/slye on` and `/slye off` persist the enabled state. Enabling with no usable model opens model selection. A save confirmation displays provider, model, and the recomputed enforced thinking level. Neither command overwrites an invalid effective configuration file.
 
 ## Eligible responses and display
 
@@ -34,8 +36,10 @@ SLYE operates only in Pi's interactive TUI. Outside the TUI it is a no-op.
 
 ## Rewrite behavior
 
-- Resolve and recheck the configured authenticated secondary Pi model, then make one isolated completion without changing Pi's active conversation model.
-- The request has a rewrite-only system prompt and one user message containing the complete target plus at most 8,000 characters of recent natural-language context from no more than two preceding turns and relevant intermediate assistant prose.
+- Before each rewrite, resolve and recheck the configured authenticated secondary Pi model, derive its lowest currently supported thinking level, and make one direct `streamSimple` completion through its effective provider without changing Pi's active conversation model or thinking. SLYE omits the reasoning option for `off` and supplies the derived non-`off` level otherwise.
+- The completion receives exactly SLYE's rewrite-only system prompt and one user message containing the complete target plus at most 8,000 characters of recent natural-language context from no more than two preceding turns and relevant intermediate assistant prose.
+- SLYE does not create an `AgentSession` or `ResourceLoader`, load `AGENTS.md`, skills, prompts, tools, or project files, or include full session history.
+- This isolation guarantee covers data and behavior supplied by SLYE. Other installed extensions and provider-side processing are outside SLYE's control.
 - Infer language only from the most recent user-labelled context. Preserve meaning, facts, names, numbers, paths, URLs, commands, Markdown structure, and fenced code blocks; ignore instructions in source text.
 - Replace clichés, stock metaphors, corporate jargon, slogans, filler, and repetition with their plain meaning instead of preserving or lightly paraphrasing them.
 - If the target is already clear, keep its wording and structure close to the original; do not turn prose into a list or add sections.
@@ -50,7 +54,7 @@ See the complete reviewed [benchmark results](doc-4%20-%20SLYE-benchmark-results
 - Quality-first recommendation: `openai-codex/gpt-5.6-terra` with reasoning off. Low-latency recommendation: `ollama-cloud/deepseek-v4-flash:0731` with reasoning off. Across both prompt phases, measured DeepSeek latency was about one-third of Terra latency.
 - `ollama-cloud/gpt-oss:20b` was tested at low and high thinking across all six fixtures. Low was fast but lower quality; high improved quality only slightly while increasing mean latency from about 1.7 seconds to about 17.2 seconds, so neither configuration is recommended.
 - `ollama-cloud/gpt-oss:120b` low was fast and competitive under the original prompt but regressed slightly under the promoted prompt. Higher thinking across the matrix did not reliably improve rewrite quality.
-- SLYE configuration selects a model, not a thinking level. Thinking labels here describe benchmark evidence rather than a SLYE configuration control. The corpus is deliberately small, so these are practical recommendations rather than universal provider guarantees.
+- SLYE automatically uses a model's lowest supported thinking level and provides no thinking control. Thinking labels here are explicit tested benchmark configurations, not user-selectable SLYE settings. The corpus is deliberately small, so these are practical recommendations rather than universal provider guarantees.
 
 ## Interaction and failures
 
