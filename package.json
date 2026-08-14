@@ -8,7 +8,9 @@
   ],
   "files": [
     "src",
-    "README.md"
+    "README.md",
+    "backlog/docs/specs/doc-1 - SLYE-MVP-specification.md",
+    "backlog/docs/runbooks/doc-2 - SLYE-sandbox-manual-checks.md"
   ],
   "pi": {
     "extensions": [

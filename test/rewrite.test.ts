@@ -23,6 +23,12 @@ test("prepares the complete eligible final response at the 200-character prose b
   assert.equal(result?.entryId, "assistant");
 });
 
+test("rejects a final response with 199 non-whitespace prose characters", () => {
+  const target = assistant([text("a".repeat(199))]);
+
+  assert.equal(prepareRewriteRequest([target], [entry("assistant", target)]), undefined);
+});
+
 test("skips short, blank, code-only, unfinished, non-stop, and tool-call final responses", () => {
   const enoughText = "prose ".repeat(40);
   const cases: AgentMessage[] = [

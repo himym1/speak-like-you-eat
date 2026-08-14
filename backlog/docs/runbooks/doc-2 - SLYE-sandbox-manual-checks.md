@@ -3,7 +3,7 @@ id: doc-2
 title: SLYE sandbox manual checks
 type: guide
 created_date: '2026-08-13 23:14'
-updated_date: '2026-08-14 01:34'
+updated_date: '2026-08-14 02:04'
 ---
 # SLYE sandbox manual checks
 
@@ -83,6 +83,53 @@ pi --approve
 2. Verify the unchanged original appears first, then the exact working text `Rewriting AI-speak…`, then one plain-language `🤌 Speak like you eat:` card. Verify the card is in the latest user's language and preserves technical literals, Markdown, and fenced code.
 3. Submit another eligible answer and press Escape while its secondary rewrite is running. A started secondary request may consume provider usage. Verify there is no card and no warning for that answer.
 4. Exit, then resume or reopen the first session. Verify the saved card still renders and that resume alone appends no duplicate card.
+
+### Slice 5 — final package verification
+
+Run this package procedure without starting Pi interactively or submitting a prompt/model request.
+
+```sh
+npm ci
+npm run check
+npm pack --dry-run --json
+```
+
+The dry run must include `README.md`, `package.json`, the `src/` files, `backlog/docs/specs/doc-1 - SLYE-MVP-specification.md`, and `backlog/docs/runbooks/doc-2 - SLYE-sandbox-manual-checks.md`. It must exclude `test/`, `backlog/tasks/`, `backlog/decisions/`, `AGENTS.md`, `.pi/`, `.pandino/`, and sandbox data.
+
+Confirm the sandbox still lists its local source package:
+
+```sh
+cd ../speak_like_you_eat_sandbox
+pi list --approve
+```
+
+For an isolated tarball smoke, create temporary package, agent, and project directories. Install the tarball beneath the temporary Pi agent npm root, write the exact package source to temporary agent settings, list it from the empty temporary project, then remove all temporary directories on success or failure:
+
+```sh
+(
+  set -e
+  package_dir=""
+  agent_dir=""
+  project_dir=""
+
+  cleanup() {
+    rm -rf "$package_dir" "$agent_dir" "$project_dir"
+  }
+
+  trap cleanup EXIT
+  package_dir="$(mktemp -d)"
+  agent_dir="$(mktemp -d)"
+  project_dir="$(mktemp -d)"
+  mkdir -p "$agent_dir/npm"
+  printf '{\n  "name": "temporary-pi-agent-npm"\n}\n' > "$agent_dir/npm/package.json"
+  tarball="$(npm pack --silent --pack-destination "$package_dir")"
+  npm install --prefix "$agent_dir/npm" --legacy-peer-deps --ignore-scripts --no-audit --no-fund "$package_dir/$tarball"
+  printf '{\n  "packages": ["npm:speak-like-you-eat@0.1.0"]\n}\n' > "$agent_dir/settings.json"
+  (cd "$project_dir" && PI_CODING_AGENT_DIR="$agent_dir" pi list --approve)
+)
+```
+
+The list must find `npm:speak-like-you-eat@0.1.0` and no temporary files may remain.
 
 ### Later slices
 

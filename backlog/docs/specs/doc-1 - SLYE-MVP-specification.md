@@ -3,13 +3,13 @@ id: doc-1
 title: SLYE MVP specification
 type: specification
 created_date: '2026-08-13 23:14'
-updated_date: '2026-08-14 01:45'
+updated_date: '2026-08-14 02:00'
 ---
 # SLYE MVP specification
 
 ## Status
 
-Slice 4 implementation is automated and review-ready. It replaces the development stub with an isolated configured-model completion, native working text, Escape cancellation, a 45-second deadline, and fail-open failure handling. The slice-4 manual model gate remains pending; the approved target behavior below is unchanged.
+Slice 4 manual gate passed in the sibling sandbox: an already-clear Italian guide returned unchanged, while a deliberately inflated Italian fixture produced a visible rewrite. `Rewriting AI-speak…` appeared, and Escape cancelled silently with the original intact and no companion card. Slice 5 hardening is underway and review-pending; the approved target behavior below is unchanged.
 
 ## Scope
 

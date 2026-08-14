@@ -5,9 +5,10 @@ status: In Progress
 assignee:
   - '@zambo'
 created_date: '2026-08-13 23:04'
-updated_date: '2026-08-14 01:34'
+updated_date: '2026-08-14 02:33'
 labels: []
-dependencies: []
+dependencies:
+  - TASK-3
 references:
   - 'https://github.com/gvzdv/claudish-to-english'
 priority: high
@@ -49,6 +50,8 @@ Create an installable Pi package that rewrites completed AI responses into clear
 Slice 1 tooling correction: Backlog CLI 1.50.1 can create but cannot update decisions. Keep accepted decision-1 as the governed decision record, never edit its Markdown directly, record the temporarily unrepresentable rationale in TASK-1 implementation notes, and continue the remaining slice instead of blocking package work.
 
 Slice 4 implementation detail: remove the SLYE_STUB path; while agent_end is still active, reuse Pi's native working indicator with the exact message Rewriting AI-speak… and the active agent AbortSignal for Escape; race an isolated configured-model completion against that cancellation and a local 45-second deadline; accept only a non-empty normal-stop text response; append it display-only; restore the working message in finally; and cover success, prompt payload, cancellation, timeout, provider failure, and warning-once behavior. Replace the cryptic model-deduplication NUL key with explicit provider/id comparison in the same slice.
+
+Slice 5 final hardening: pin the 199-character rejection boundary; make the packed artifact self-contained by including the authoritative specification/runbook referenced by README; finish README installation, behavior, cost, cancellation, failure, and development guidance without claiming npm publication; extend package-contract checks where useful; update governed status/runbook through Backlog CLI; run all checks plus an isolated tarball install/list smoke with no model call; audit secrets/dead stub/debug output; run taste/spec review, then docs-reviewer and final-reviewer once; resolve findings, verify every acceptance criterion objectively, and finalize TASK-1.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -73,4 +76,10 @@ Slice 3 automated verification passed on 2026-08-14: agent_end final-response se
 Manual slice-3 gate passed on 2026-08-14 in the sibling sandbox: one persistent companion card appeared after the unchanged original, and resuming the same session rendered the saved card without appending a duplicate. Zambo also requested removal of the unnecessary \u0000 composite-key trick; the slice-4 cleanup will use explicit provider/id comparison.
 
 Slice 4 automated implementation is review-ready on 2026-08-14: the configured authenticated model is called through an isolated completion with a rewrite-only prompt, working indicator, user cancellation, a 45-second local deadline, response validation, display-only append, duplicate suppression, and warning-once fail-open handling. Focused Node tests pass; the slice-4 manual model gate in doc-2 remains pending.
+
+Manual slice-4 gate passed on 2026-08-14 in the sibling sandbox. The first already-clear Italian guide produced an identical secondary output, confirming the real model call but not simplification; a deliberately inflated Italian AI-speak fixture then produced a visible rewrite. Rewriting AI-speak… appeared, Escape cancelled silently with the original intact and no companion card, and the remaining transcript/resume behavior worked. Cross-model quality benchmarking is intentionally outside the MVP and tracked separately.
+
+Slice 5 verification progress on 2026-08-14: `npm ci` succeeded (`added 150 packages`, `found 0 vulnerabilities`); `npm run check` passed with 34 tests passed, 0 failed, 0 cancelled, and 0 skipped. `npm pack --dry-run --json` was verified to contain exactly `README.md`, `package.json`, `src/config.ts`, `src/index.ts`, `src/model-rewrite.ts`, `src/rewrite.ts`, `backlog/docs/specs/doc-1 - SLYE-MVP-specification.md`, and `backlog/docs/runbooks/doc-2 - SLYE-sandbox-manual-checks.md`, with tests, tasks, decision, workflow, and sandbox files excluded. `git diff --check` passed. `cd ../speak_like_you_eat_sandbox && pi list --approve` listed the local `../../speak_like_you_eat` package. The isolated tarball smoke passed: `npm pack` produced the tarball, `npm install --prefix <temporary-agent>/npm --legacy-peer-deps --ignore-scripts --no-audit --no-fund` installed it, temporary agent settings contained exactly `npm:speak-like-you-eat@0.1.0`, and `pi list --approve` found it; temporary directories were removed. The tracked-product audit found no secrets, stale runtime `SLYE_STUB`, debug output, direct runtime `sendMessage`/`setModel`, or generated artifacts; `test/display.test.ts` intentionally retains a mocked `sendMessage` counter to assert zero calls. Manual slice-4 gate remains passed, including the deliberately inflated Italian fixture and silent Escape cancellation. Slice 5 is still review-pending; no acceptance criteria, final summary, or terminal status were changed.
+
+On 2026-08-14, the user made TASK-3 a release gate after observing the configured model copy a mostly-clear 225-non-whitespace-character English/Italian-style answer containing an isolated cliché. TASK-1 now waits for benchmark recommendations; no benchmark execution is claimed.
 <!-- SECTION:NOTES:END -->
