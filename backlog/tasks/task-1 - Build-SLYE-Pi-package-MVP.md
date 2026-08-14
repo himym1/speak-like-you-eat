@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@zambo'
 created_date: '2026-08-13 23:04'
-updated_date: '2026-08-14 17:55'
+updated_date: '2026-08-14 20:39'
 labels: []
 dependencies:
   - TASK-3
@@ -27,14 +27,14 @@ Create an installable Pi package that rewrites completed AI responses into clear
 - [ ] #1 The repository is an installable Pi package with strict TypeScript checks and documented development commands.
 - [ ] #2 In interactive TUI sessions, a normally completed final assistant response with at least 200 non-whitespace prose characters receives an appended SLYE rewrite; intermediate, aborted, errored, truncated, tool-call, thinking, and tool-result content is not rewritten.
 - [ ] #3 The rewrite uses the language of the user and preserves facts, names, numbers, paths, Markdown structure, commands, and fenced code blocks.
-- [ ] #4 The selected secondary model comes from authenticated Pi scoped models, is displayed as provider / model, and is configured through /slye model with global or project-local persistence in slye.json.
+- [ ] #4 The secondary model comes from authenticated eligible Pi models: the picker starts with eligible scoped models when available, Tab can switch to all authenticated eligible models, provider/model/effective minimum thinking are visible, and configuration persists enabled plus provider/id but never thinking, globally or for a trusted project.
 - [ ] #5 /slye on and /slye off persist in slye.json; enabling without a configured model opens model selection.
 - [ ] #6 When no model is configured, Pi shows a non-modal yellow startup warning directing the user to /slye model; SLYE otherwise performs no work.
 - [ ] #7 While rewriting, Pi shows Rewriting AI-speak…; Escape cancels without an error warning, and a 45-second timeout or provider/configuration failure leaves only the original response and emits at most one warning per session.
 - [ ] #8 The appended entry is labelled 🤌 Speak like you eat:, persists across session resume, and never enters LLM context.
-- [ ] #9 The rewriter receives the complete target response plus at most 8,000 characters of recent natural-language context from up to two preceding turns and relevant intermediate assistant prose; thinking, tool calls, tool results, and fenced code blocks from prior context are excluded.
+- [ ] #9 The rewriter receives the complete target response plus at most 8,000 characters of recent natural-language context from up to two preceding user-led turns and relevant intermediate assistant prose; thinking, tool calls, tool results, and fenced code blocks from prior context are excluded.
 - [ ] #10 SLYE is a no-op outside interactive TUI mode.
-- [ ] #11 A separate sandbox project demonstrates each vertical slice manually before the next slice is implemented, and automated tests cover meaningful pure logic and failure behavior.
+- [ ] #11 The sibling sandbox records manual end-to-end rewrite, cancellation, and resume behavior for the original model-calling slice; the current direct-completion isolation and post-benchmark model controls are covered by exact automated tests plus a no-request picker check, and meaningful logic and failure behavior have automated coverage.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -90,4 +90,6 @@ Slice 5 verification progress on 2026-08-14: `npm ci` succeeded (`added 150 pack
 On 2026-08-14, the user made TASK-3 a release gate after observing the configured model copy a mostly-clear 225-non-whitespace-character English/Italian-style answer containing an isolated cliché. TASK-1 now waits for benchmark recommendations; no benchmark execution is claimed.
 
 Published the standalone governed benchmark report as doc-4 and linked it from README, doc-1, and doc-3. The package is now self-contained with exactly nine files. During adversarial review, raw-row recomputation falsified historical aggregate cost and median fields: current truth is phase one USD 0.06482709 with 3,800.5 ms overall median and corrected per-candidate costs/medians; phase two USD 0.00238211. FINDINGS.md and TASK-3 preserve the corrections. No model call ran and ignored evidence/manifests remained unchanged. Taste/spec review must-fixes were resolved; npm run check passed 56 tests, both dry-runs preserved approved fingerprints/budgets, and the exact nine-file package check passed.
+
+Post-benchmark TASK-1.1 completed on 2026-08-14: every rewrite re-resolves the selected model and uses its lowest currently supported thinking level; the direct provider completion sends only SLYE's isolated payload; and /slye model offers a searchable scoped-first/all-authenticated Tab picker without persisting the view or thinking. TASK-1.1 records the integrated verification evidence. Branch-level documentation and final review remain before parent-task finalization.
 <!-- SECTION:NOTES:END -->

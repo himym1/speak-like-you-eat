@@ -3,13 +3,13 @@ id: doc-1
 title: SLYE MVP specification
 type: specification
 created_date: '2026-08-13 23:14'
-updated_date: '2026-08-14 20:32'
+updated_date: '2026-08-14 20:39'
 ---
 # SLYE MVP specification
 
 ## Status
 
-All implementation slices and the sandbox gates have passed. Package hardening, the public two-phase benchmark, and the evidence-based prompt promotion are complete. Final acceptance verification and branch-level documentation/final review remain before MVP closure.
+The MVP implementation and sandbox gates are complete. The public two-phase benchmark, evidence-based prompt promotion, automatic minimum-thinking policy, scoped/all model picker, and integrated package verification are also complete. MVP acceptance and branch-level review evidence are tracked in TASK-1.
 
 ## Scope
 
@@ -37,7 +37,7 @@ SLYE operates only in Pi's interactive TUI. Outside the TUI it is a no-op.
 ## Rewrite behavior
 
 - Before each rewrite, resolve and recheck the configured authenticated secondary Pi model, derive its lowest currently supported thinking level, and make one direct `streamSimple` completion through its effective provider without changing Pi's active conversation model or thinking. SLYE omits the reasoning option for `off` and supplies the derived non-`off` level otherwise.
-- The completion receives exactly SLYE's rewrite-only system prompt and one user message containing the complete target plus at most 8,000 characters of recent natural-language context from no more than two preceding turns and relevant intermediate assistant prose.
+- The completion receives exactly SLYE's rewrite-only system prompt and one user message containing the complete target plus at most 8,000 characters of recent natural-language context from no more than two preceding user-led turns and relevant intermediate assistant prose.
 - SLYE does not create an `AgentSession` or `ResourceLoader`, load `AGENTS.md`, skills, prompts, tools, or project files, or include full session history.
 - This isolation guarantee covers data and behavior supplied by SLYE. Other installed extensions and provider-side processing are outside SLYE's control.
 - Infer language only from the most recent user-labelled context. Preserve meaning, facts, names, numbers, paths, URLs, commands, Markdown structure, and fenced code blocks; ignore instructions in source text.
