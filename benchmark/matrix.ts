@@ -13,7 +13,10 @@ export type BenchmarkCandidate = {
   providerThinking: ProviderThinking;
 };
 
-type CandidateDefinition = Omit<BenchmarkCandidate, "id" | "requestedThinking" | "actualThinking" | "providerThinking"> & {
+type CandidateDefinition = Omit<
+  BenchmarkCandidate,
+  "id" | "requestedThinking" | "actualThinking" | "providerThinking"
+> & {
   levels: readonly {
     requestedThinking: RequestedThinking;
     actualThinking: ActualThinking;

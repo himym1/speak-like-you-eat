@@ -31,7 +31,12 @@ import {
   PHASE_ONE_SYSTEM_PROMPT,
   PHASE_TWO_SYSTEM_PROMPT,
 } from "../benchmark/prompt-variants.ts";
-import { assignCandidateLabels, evaluateMechanicalChecks, readLocalResults, writeBlindReport } from "../benchmark/report.ts";
+import {
+  assignCandidateLabels,
+  evaluateMechanicalChecks,
+  readLocalResults,
+  writeBlindReport,
+} from "../benchmark/report.ts";
 import {
   type BenchmarkResult,
   type BenchmarkSuite,
@@ -59,7 +64,9 @@ function suiteWithTemporaryManifest(suite: BenchmarkSuite, directory: string): B
   };
 }
 
-function configuredRuntime(options: { authenticated?: boolean; nullXhigh?: boolean; wrongMax?: boolean; providerDefaults?: boolean } = {}) {
+function configuredRuntime(
+  options: { authenticated?: boolean; nullXhigh?: boolean; wrongMax?: boolean; providerDefaults?: boolean } = {},
+) {
   return {
     hasConfiguredAuth: () => options.authenticated ?? true,
     getModel: (provider: string) => {
@@ -79,7 +86,10 @@ function configuredRuntime(options: { authenticated?: boolean; nullXhigh?: boole
           : { off: "omitted", high: "high", max: options.wrongMax ? "high" : "max" },
       };
     },
-    completeSimple: async (_model: unknown, _context: unknown) => ({ stopReason: "stop", content: [{ type: "text", text: "fake final" }] }),
+    completeSimple: async (_model: unknown, _context: unknown) => ({
+      stopReason: "stop",
+      content: [{ type: "text", text: "fake final" }],
+    }),
   };
 }
 
@@ -118,9 +128,10 @@ test("benchmark corpus remains production-eligible, bounded, and all English fix
       "just hope with a technical name",
     ),
   );
-  assert.deepEqual(BENCHMARK_CORPUS.find((fixture) => fixture.id === "technical-literals")?.expectations.requiredLiteralOccurrences, [
-    { literal: "42", required: 2 },
-  ]);
+  assert.deepEqual(
+    BENCHMARK_CORPUS.find((fixture) => fixture.id === "technical-literals")?.expectations.requiredLiteralOccurrences,
+    [{ literal: "42", required: 2 }],
+  );
   for (const fixture of BENCHMARK_CORPUS) {
     assert.ok(fixture.request.target.replaceAll(/\s/g, "").length >= 200);
     const latestUserText = [...fixture.request.context].reverse().find((entry) => entry.role === "user")?.text;
@@ -132,13 +143,21 @@ test("benchmark corpus remains production-eligible, bounded, and all English fix
 test("matrix uses explicit Pi and provider thinking semantics", () => {
   validateCandidateMatrix();
   assert.equal(BENCHMARK_CANDIDATES.length, 18);
-  const deepSeekOff = required(BENCHMARK_CANDIDATES.find((candidate) => candidate.id === "ollama-cloud/deepseek-v4-flash:0731#off"));
-  const haikuOff = required(BENCHMARK_CANDIDATES.find((candidate) => candidate.id === "anthropic/claude-haiku-4-5#off"));
+  const deepSeekOff = required(
+    BENCHMARK_CANDIDATES.find((candidate) => candidate.id === "ollama-cloud/deepseek-v4-flash:0731#off"),
+  );
+  const haikuOff = required(
+    BENCHMARK_CANDIDATES.find((candidate) => candidate.id === "anthropic/claude-haiku-4-5#off"),
+  );
   const lunaOff = required(BENCHMARK_CANDIDATES.find((candidate) => candidate.id === "openai-codex/gpt-5.6-luna#off"));
   assert.deepEqual([deepSeekOff.actualThinking, deepSeekOff.providerThinking], ["off", "none"]);
   assert.deepEqual([haikuOff.actualThinking, haikuOff.providerThinking], ["off", "disabled"]);
   assert.deepEqual([lunaOff.actualThinking, lunaOff.providerThinking], ["off", "omitted"]);
-  assert.ok(BENCHMARK_CANDIDATES.every((candidate) => candidate.actualThinking !== undefined && candidate.providerThinking !== undefined));
+  assert.ok(
+    BENCHMARK_CANDIDATES.every(
+      (candidate) => candidate.actualThinking !== undefined && candidate.providerThinking !== undefined,
+    ),
+  );
 });
 
 test("deterministic manifest contains 108 isolated payload rows, explicit semantics, and ceiling budgets", async () => {
@@ -159,13 +178,18 @@ test("deterministic manifest contains 108 isolated payload rows, explicit semant
     "ollama-cloud/gpt-oss:120b": 12,
     "ollama-cloud/gpt-oss:20b": 12,
   });
-  assert.ok(manifest.rows.every((row) => row.actualPiThinking !== undefined && row.expectedProviderThinking !== undefined));
+  assert.ok(
+    manifest.rows.every((row) => row.actualPiThinking !== undefined && row.expectedProviderThinking !== undefined),
+  );
   assert.ok(manifest.rows.every((row) => row.outputTokenCeiling === OUTPUT_TOKEN_CEILING && row.deadlineMs === 45_000));
   assert.ok(manifest.rows.every((row) => row.completionMethod === "completeSimple" && row.cacheRetention === "none"));
 });
 
 test("phase two pins its subset, frozen prompt, metadata, call identities, and budgets", async () => {
-  assert.equal(PHASE_TWO_SYSTEM_PROMPT.endsWith("Output only the rewrite, with no label, preamble, or commentary."), true);
+  assert.equal(
+    PHASE_TWO_SYSTEM_PROMPT.endsWith("Output only the rewrite, with no label, preamble, or commentary."),
+    true,
+  );
   assert.deepEqual(
     PHASE_TWO_FIXTURES.map((fixture) => fixture.id),
     PHASE_TWO_FIXTURE_IDS,
@@ -209,7 +233,11 @@ test("phase two pins its subset, frozen prompt, metadata, call identities, and b
     false,
   );
   assert.ok(manifest.rows.every((row) => row.completionMethod === "completeSimple" && row.cacheRetention === "none"));
-  assert.ok(manifest.rows.every((row) => row.requestMaxTokens === 8_192 && row.outputTokenCeiling === 8_192 && row.deadlineMs === 45_000));
+  assert.ok(
+    manifest.rows.every(
+      (row) => row.requestMaxTokens === 8_192 && row.outputTokenCeiling === 8_192 && row.deadlineMs === 45_000,
+    ),
+  );
 });
 
 test("call identity includes every execution-relevant row field", async () => {
@@ -270,7 +298,10 @@ test("committed manifests exactly match their frozen prompt builders", async () 
   const expectedPhaseOne = `${stablePrettyJson(await buildManifest())}\n`;
   const expectedPhaseTwo = `${stablePrettyJson(await buildPhaseTwoManifest())}\n`;
   assert.equal(await readFile(new URL("../benchmark/manifest.json", import.meta.url), "utf8"), expectedPhaseOne);
-  assert.equal(await readFile(new URL("../benchmark/phase-2-manifest.json", import.meta.url), "utf8"), expectedPhaseTwo);
+  assert.equal(
+    await readFile(new URL("../benchmark/phase-2-manifest.json", import.meta.url), "utf8"),
+    expectedPhaseTwo,
+  );
 });
 
 test("phase-one benchmark payload is the frozen historical production baseline", async () => {
@@ -295,13 +326,18 @@ test("manifest rows and completion options make Haiku high and off settings exac
   const manifest = await buildManifest();
   const haiku = required(
     manifest.rows.find(
-      (row) => row.fixture === "backup-cliche" && row.canonicalModel === "anthropic/claude-haiku-4-5" && row.requestedThinking === "high",
+      (row) =>
+        row.fixture === "backup-cliche" &&
+        row.canonicalModel === "anthropic/claude-haiku-4-5" &&
+        row.requestedThinking === "high",
     ),
   );
   const off = required(
     manifest.rows.find(
       (row) =>
-        row.fixture === "backup-cliche" && row.canonicalModel === "ollama-cloud/deepseek-v4-flash:0731" && row.requestedThinking === "off",
+        row.fixture === "backup-cliche" &&
+        row.canonicalModel === "ollama-cloud/deepseek-v4-flash:0731" &&
+        row.requestedThinking === "off",
     ),
   );
   const haikuOptions = completionOptions(haiku, new AbortController().signal);
@@ -337,7 +373,9 @@ test("manifest rows and completion options make Haiku high and off settings exac
   const customHaikuRows = manifest.rows.filter((row) => row.haikuHighThinkingBudget !== null);
   assert.equal(customHaikuRows.length, 6);
   assert.ok(customHaikuRows.every((row) => row.requestMaxTokens === 1_024 && row.haikuHighThinkingBudget === 7_168));
-  assert.ok(manifest.rows.filter((row) => row.haikuHighThinkingBudget === null).every((row) => row.requestMaxTokens === 8_192));
+  assert.ok(
+    manifest.rows.filter((row) => row.haikuHighThinkingBudget === null).every((row) => row.requestMaxTokens === 8_192),
+  );
   assert.ok(manifest.rows.filter((row) => row.actualPiThinking === "off").every((row) => row.reasoning === null));
 });
 
@@ -348,8 +386,14 @@ test("runtime validation checks authentication, model mappings, and unsupported 
     () => validateRuntimeSupport(configuredRuntime({ authenticated: false }) as never, manifest),
     /authentication is unavailable/,
   );
-  assert.throws(() => validateRuntimeSupport(configuredRuntime({ nullXhigh: true }) as never, manifest), /does not support xhigh/);
-  assert.throws(() => validateRuntimeSupport(configuredRuntime({ wrongMax: true }) as never, manifest), /maps max unexpectedly/);
+  assert.throws(
+    () => validateRuntimeSupport(configuredRuntime({ nullXhigh: true }) as never, manifest),
+    /does not support xhigh/,
+  );
+  assert.throws(
+    () => validateRuntimeSupport(configuredRuntime({ wrongMax: true }) as never, manifest),
+    /maps max unexpectedly/,
+  );
   assert.doesNotThrow(() => validateRuntimeSupport(configuredRuntime({ providerDefaults: true }) as never, manifest));
   const missingModel = { ...configuredRuntime(), getModel: () => undefined };
   assert.throws(() => validateRuntimeSupport(missingModel as never, manifest), /model is unavailable/);
@@ -482,19 +526,33 @@ test("only final result categories are settled and retryable failures stop", () 
   assert.equal(isSettledResult(resultFor("fixture")), true);
   assert.equal(isSettledResult(resultFor("fixture", { outcome: "timeout", textBlocks: [], stopReason: null })), true);
   assert.equal(
-    isSettledResult(resultFor("fixture", { outcome: "error", errorCategory: "provider_error", textBlocks: [], stopReason: null })),
+    isSettledResult(
+      resultFor("fixture", { outcome: "error", errorCategory: "provider_error", textBlocks: [], stopReason: null }),
+    ),
     true,
   );
   assert.equal(
-    isSettledResult(resultFor("fixture", { outcome: "error", errorCategory: "unknown", textBlocks: [], stopReason: null })),
+    isSettledResult(
+      resultFor("fixture", { outcome: "error", errorCategory: "unknown", textBlocks: [], stopReason: null }),
+    ),
     true,
   );
-  assert.equal(isSettledResult(resultFor("fixture", { outcome: "cancelled", textBlocks: [], stopReason: null })), false);
+  assert.equal(
+    isSettledResult(resultFor("fixture", { outcome: "cancelled", textBlocks: [], stopReason: null })),
+    false,
+  );
   for (const errorCategory of ["aborted", "authentication", "rate_limit"] as const) {
-    assert.equal(shouldStopAfterResult(resultFor("fixture", { outcome: "error", errorCategory, textBlocks: [], stopReason: null })), true);
+    assert.equal(
+      shouldStopAfterResult(
+        resultFor("fixture", { outcome: "error", errorCategory, textBlocks: [], stopReason: null }),
+      ),
+      true,
+    );
   }
   assert.equal(
-    shouldStopAfterResult(resultFor("fixture", { outcome: "error", errorCategory: "provider_error", textBlocks: [], stopReason: null })),
+    shouldStopAfterResult(
+      resultFor("fixture", { outcome: "error", errorCategory: "provider_error", textBlocks: [], stopReason: null }),
+    ),
     false,
   );
 });
@@ -532,7 +590,10 @@ test("direct completion uses the frozen context for each benchmark phase and san
     phaseTwoManifest.pricing.prices[phaseTwoRow.priceModel],
     buildPhaseTwoContext,
   );
-  assert.deepEqual(seenContexts, [buildPhaseOneContext(fixture.request), buildPhaseTwoContext(phaseTwoFixture.request)]);
+  assert.deepEqual(seenContexts, [
+    buildPhaseOneContext(fixture.request),
+    buildPhaseTwoContext(phaseTwoFixture.request),
+  ]);
   assert.deepEqual(result.textBlocks, ["Final rewrite."]);
   assert.equal(JSON.stringify(result).includes("never save this"), false);
   assert.equal(result.openRouterEquivalentCost, "0.00000196");
@@ -568,14 +629,17 @@ test("timeout and an already-aborted signal cancel without beginning another com
 test("mechanical checks make cliches, case-insensitive forbidden text, literal counts, failures, and preambles visible", () => {
   const cliche = required(BENCHMARK_CORPUS.find((fixture) => fixture.id === "backup-cliche"));
   assert.ok(
-    evaluateMechanicalChecks(cliche, resultFor(cliche.id, { textBlocks: ["JUST HOPE WITH A TECHNICAL NAME"] })).forbiddenText.includes(
-      "just hope with a technical name",
-    ),
+    evaluateMechanicalChecks(
+      cliche,
+      resultFor(cliche.id, { textBlocks: ["JUST HOPE WITH A TECHNICAL NAME"] }),
+    ).forbiddenText.includes("just hope with a technical name"),
   );
   const technical = required(BENCHMARK_CORPUS.find((fixture) => fixture.id === "technical-literals"));
   const checks = evaluateMechanicalChecks(
     technical,
-    resultFor(technical.id, { textBlocks: ["Run `slye verify --limit 42` from /tmp/slye-demo at https://example.com/docs."] }),
+    resultFor(technical.id, {
+      textBlocks: ["Run `slye verify --limit 42` from /tmp/slye-demo at https://example.com/docs."],
+    }),
   );
   assert.deepEqual(checks.literalOccurrenceShortfalls, [{ literal: "42", actual: 1, required: 2 }]);
   const wrongCase = evaluateMechanicalChecks(
@@ -586,14 +650,20 @@ test("mechanical checks make cliches, case-insensitive forbidden text, literal c
   );
   assert.ok(wrongCase.missingLiterals.includes("slye verify --limit 42"));
   assert.equal(
-    evaluateMechanicalChecks(technical, resultFor(technical.id, { outcome: "timeout", textBlocks: [] })).expectedChangeSatisfied,
+    evaluateMechanicalChecks(technical, resultFor(technical.id, { outcome: "timeout", textBlocks: [] }))
+      .expectedChangeSatisfied,
     false,
   );
   assert.equal(
-    evaluateMechanicalChecks(cliche, resultFor(cliche.id, { textBlocks: ["Here's a clearer version: text"] })).likelyPreamble,
+    evaluateMechanicalChecks(cliche, resultFor(cliche.id, { textBlocks: ["Here's a clearer version: text"] }))
+      .likelyPreamble,
     true,
   );
-  assert.equal(evaluateMechanicalChecks(cliche, resultFor(cliche.id, { textBlocks: ["Here is the rewrite: text"] })).likelyPreamble, true);
+  assert.equal(
+    evaluateMechanicalChecks(cliche, resultFor(cliche.id, { textBlocks: ["Here is the rewrite: text"] }))
+      .likelyPreamble,
+    true,
+  );
 });
 
 test("blind reports group fixtures, keep a random stable local mapping, and hide identities", async (t) => {
@@ -648,7 +718,10 @@ test("phase-two blind reports use only the phase-two corpus", async (t) => {
   for (const fixture of PHASE_TWO_FIXTURES) {
     assert.match(text, new RegExp(fixture.source));
   }
-  assert.equal(text.includes(required(BENCHMARK_CORPUS.find((fixture) => fixture.id === "technical-literals")).source), false);
+  assert.equal(
+    text.includes(required(BENCHMARK_CORPUS.find((fixture) => fixture.id === "technical-literals")).source),
+    false,
+  );
 });
 
 test("local result loading ignores stale call IDs before parsing or reporting", async (t) => {
@@ -656,7 +729,10 @@ test("local result loading ignores stale call IDs before parsing or reporting", 
   t.after(() => rm(workDirectory, { recursive: true, force: true }));
   const manifest = await buildManifest();
   const currentRow = required(manifest.rows[0]);
-  await writeFile(join(workDirectory, "stale-call.json"), `${JSON.stringify(resultFor("removed-fixture", { callId: "stale-call" }))}\n`);
+  await writeFile(
+    join(workDirectory, "stale-call.json"),
+    `${JSON.stringify(resultFor("removed-fixture", { callId: "stale-call" }))}\n`,
+  );
   await writeFile(
     join(workDirectory, `${currentRow.callId}.json`),
     `${JSON.stringify(resultFor(currentRow.fixture, { callId: currentRow.callId }))}\n`,

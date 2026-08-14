@@ -1,4 +1,9 @@
-import { MAXIMUM_CONTEXT_CHARACTERS, type RewriteRequest, serializeContext, stripFencedCodeBlocks } from "../src/rewrite.ts";
+import {
+  MAXIMUM_CONTEXT_CHARACTERS,
+  type RewriteRequest,
+  serializeContext,
+  stripFencedCodeBlocks,
+} from "../src/rewrite.ts";
 
 export type FixtureExpectations = {
   expectedChange: boolean;

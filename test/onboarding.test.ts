@@ -3,7 +3,12 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { CONFIG_DIR_NAME, type ExtensionAPI, type ExtensionCommandContext, type ExtensionContext } from "@earendil-works/pi-coding-agent";
+import {
+  CONFIG_DIR_NAME,
+  type ExtensionAPI,
+  type ExtensionCommandContext,
+  type ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
 import { CONFIG_FILENAME, readConfig, writeConfigAtomically } from "../src/config.ts";
 import speakLikeYouEat from "../src/index.ts";
 import { formatModelCandidate, selectModelCandidates } from "../src/model-picker.ts";
@@ -30,7 +35,10 @@ function createExtension(): {
     on(event: string, handler: unknown) {
       if (event === "session_start") {
         startSession = async (ctx) => {
-          await (handler as (event: { type: "session_start" }, context: ExtensionContext) => Promise<void>)({ type: "session_start" }, ctx);
+          await (handler as (event: { type: "session_start" }, context: ExtensionContext) => Promise<void>)(
+            { type: "session_start" },
+            ctx,
+          );
         };
       }
     },
@@ -76,7 +84,8 @@ function createContext(options: {
   const authenticated = options.authenticated ?? (() => true);
   const registry = {
     getAvailable: () => models,
-    find: (provider: string, id: string) => models.find((candidate) => candidate.provider === provider && candidate.id === id),
+    find: (provider: string, id: string) =>
+      models.find((candidate) => candidate.provider === provider && candidate.id === id),
     hasConfiguredAuth: authenticated,
   };
   const context = {
@@ -112,7 +121,9 @@ test("selects authenticated candidates, removes duplicates, and orders them", ()
   const unavailable = model("alpha", "three");
 
   assert.deepEqual(
-    selectModelCandidates([beta, alpha, beta, unavailable], (candidate) => candidate !== unavailable).map(formatModelCandidate),
+    selectModelCandidates([beta, alpha, beta, unavailable], (candidate) => candidate !== unavailable).map(
+      formatModelCandidate,
+    ),
     ["alpha / one · thinking: off", "beta / two · thinking: off"],
   );
   assert.deepEqual(selectModelCandidates([beta, alpha], () => true).map(formatModelCandidate), [
@@ -164,7 +175,9 @@ test("/slye model writes the selected trusted project configuration", async (t) 
     path,
     config: { enabled: true, model: { provider: "openai", id: "gpt-5" } },
   });
-  assert.deepEqual(notifications, [{ message: "SLYE enabled with openai / gpt-5 · thinking: off for This project only.", type: "info" }]);
+  assert.deepEqual(notifications, [
+    { message: "SLYE enabled with openai / gpt-5 · thinking: off for This project only.", type: "info" },
+  ]);
 });
 
 test("/slye model can select an all-only authenticated model after opening scoped", async (t) => {
@@ -199,7 +212,9 @@ test("/slye model can select an all-only authenticated model after opening scope
   assert.match(pickerRenders[0] ?? "", /Scope: Scoped models/);
   assert.match(pickerRenders[0] ?? "", /openai \/ scoped · thinking: off/);
   assert.match(pickerRenders[1] ?? "", /Scope: All authenticated models/);
-  assert.deepEqual(notifications, [{ message: "SLYE enabled with zeta / all-only · thinking: off for All projects.", type: "info" }]);
+  assert.deepEqual(notifications, [
+    { message: "SLYE enabled with zeta / all-only · thinking: off for All projects.", type: "info" },
+  ]);
 });
 
 test("/slye model writes the selected global configuration", async (t) => {
@@ -394,7 +409,9 @@ test("/slye on restores a usable trusted project model without opening a picker"
     config: { enabled: true, model: projectModel },
   });
   assert.equal(await readFile(globalPath, "utf8"), globalContents);
-  assert.deepEqual(notifications, [{ message: "SLYE enabled with project / model · thinking: low for This project only.", type: "info" }]);
+  assert.deepEqual(notifications, [
+    { message: "SLYE enabled with project / model · thinking: low for This project only.", type: "info" },
+  ]);
 });
 
 test("startup warns once for invalid configuration, warns for unusable models, and ignores disabled configuration", async (t) => {

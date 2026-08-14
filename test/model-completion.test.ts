@@ -64,23 +64,38 @@ function result(): AssistantMessage {
 }
 
 test("uses off only for non-reasoning models", () => {
-  assert.equal(lowestSupportedThinkingLevel(model({ reasoning: false, thinkingLevelMap: unsupportedThinkingLevels })), "off");
+  assert.equal(
+    lowestSupportedThinkingLevel(model({ reasoning: false, thinkingLevelMap: unsupportedThinkingLevels })),
+    "off",
+  );
 });
 
 test("supports standard levels when their map values are omitted and excludes null", () => {
   assert.equal(lowestSupportedThinkingLevel(model()), "off");
   assert.equal(lowestSupportedThinkingLevel(model({ thinkingLevelMap: { off: null } })), "minimal");
   assert.equal(lowestSupportedThinkingLevel(model({ thinkingLevelMap: { off: null, minimal: null } })), "low");
-  assert.equal(lowestSupportedThinkingLevel(model({ thinkingLevelMap: { off: null, minimal: null, low: null } })), "medium");
-  assert.equal(lowestSupportedThinkingLevel(model({ thinkingLevelMap: { off: null, minimal: null, low: null, medium: null } })), "high");
+  assert.equal(
+    lowestSupportedThinkingLevel(model({ thinkingLevelMap: { off: null, minimal: null, low: null } })),
+    "medium",
+  );
+  assert.equal(
+    lowestSupportedThinkingLevel(model({ thinkingLevelMap: { off: null, minimal: null, low: null, medium: null } })),
+    "high",
+  );
 });
 
 test("requires an explicit string mapping for extended levels", () => {
   const standardLevelsExcluded = { off: null, minimal: null, low: null, medium: null, high: null } as const;
 
   assert.equal(lowestSupportedThinkingLevel(model({ thinkingLevelMap: standardLevelsExcluded })), undefined);
-  assert.equal(lowestSupportedThinkingLevel(model({ thinkingLevelMap: { ...standardLevelsExcluded, xhigh: "xhigh" } })), "xhigh");
-  assert.equal(lowestSupportedThinkingLevel(model({ thinkingLevelMap: { ...standardLevelsExcluded, xhigh: null, max: "max" } })), "max");
+  assert.equal(
+    lowestSupportedThinkingLevel(model({ thinkingLevelMap: { ...standardLevelsExcluded, xhigh: "xhigh" } })),
+    "xhigh",
+  );
+  assert.equal(
+    lowestSupportedThinkingLevel(model({ thinkingLevelMap: { ...standardLevelsExcluded, xhigh: null, max: "max" } })),
+    "max",
+  );
 });
 
 test("returns undefined when every thinking level is excluded", () => {
@@ -117,7 +132,11 @@ test("dispatches an off request with the original model and forwarded auth", asy
   } as unknown as ModelRegistry;
 
   assert.deepEqual(
-    await completeModel(registry, selectedModel, selectedContext, { signal, cacheRetention: "none", sessionId: "session" }),
+    await completeModel(registry, selectedModel, selectedContext, {
+      signal,
+      cacheRetention: "none",
+      sessionId: "session",
+    }),
     result(),
   );
   assert.strictEqual(receivedModel, selectedModel);

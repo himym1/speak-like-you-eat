@@ -177,7 +177,9 @@ async function chooseAndSaveModel(ctx: ExtensionCommandContext): Promise<void> {
     ctx.scopedModels.map(({ model }) => model),
     (model) => ctx.modelRegistry.hasConfiguredAuth(model),
   );
-  const allCandidates = selectModelCandidates(ctx.modelRegistry.getAvailable(), (model) => ctx.modelRegistry.hasConfiguredAuth(model));
+  const allCandidates = selectModelCandidates(ctx.modelRegistry.getAvailable(), (model) =>
+    ctx.modelRegistry.hasConfiguredAuth(model),
+  );
   if (scopedCandidates.length === 0 && allCandidates.length === 0) {
     ctx.ui.notify("No authenticated models are available for SLYE.", "warning");
     return;

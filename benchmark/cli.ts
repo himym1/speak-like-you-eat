@@ -35,7 +35,9 @@ if (command === "dry-run") {
 } else if (command === "phase-2-report") {
   await writeReport(PHASE_TWO_SUITE, PHASE_TWO_WORK_DIRECTORY);
 } else {
-  console.error("Usage: benchmark/cli.ts <dry-run|run|report|phase-2-dry-run|phase-2-run|phase-2-report> [--approve <fingerprint>]");
+  console.error(
+    "Usage: benchmark/cli.ts <dry-run|run|report|phase-2-dry-run|phase-2-run|phase-2-report> [--approve <fingerprint>]",
+  );
   process.exitCode = 1;
 }
 
@@ -54,7 +56,12 @@ function printManifest(manifest: BenchmarkManifest): void {
 async function writeReport(suite: BenchmarkSuite, workDirectory: string): Promise<void> {
   const manifest = await suite.buildManifest();
   const allowedCallIds = new Set(manifest.rows.map((row) => row.callId));
-  const report = await writeBlindReport(await readLocalResults(workDirectory, allowedCallIds), workDirectory, undefined, suite.corpus);
+  const report = await writeBlindReport(
+    await readLocalResults(workDirectory, allowedCallIds),
+    workDirectory,
+    undefined,
+    suite.corpus,
+  );
   console.log(`Blind report: ${report.reportPath}`);
   console.log(`Local mapping: ${report.mappingPath}`);
 }

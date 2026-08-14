@@ -17,7 +17,10 @@ test("builds one isolated user message with labelled context, the complete targe
   assert.equal(context.messages[0]?.role, "user");
   assert.match(context.messages[0]?.content ?? "", /user:\nSpiega in italiano\./);
   assert.match(context.messages[0]?.content ?? "", /assistant:\nPrior assistant prose\./);
-  assert.match(context.messages[0]?.content ?? "", /Target \*\*Markdown\*\* with `command` and https:\/\/example\.test\/path\./);
+  assert.match(
+    context.messages[0]?.content ?? "",
+    /Target \*\*Markdown\*\* with `command` and https:\/\/example\.test\/path\./,
+  );
   assert.deepEqual(context.systemPrompt.split("\n"), [
     "Rewrite only the target in clear, everyday language.",
     "Use short, direct sentences and everyday words.",

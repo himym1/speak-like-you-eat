@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { AgentEndEvent, SessionEntry } from "@earendil-works/pi-coding-agent";
-import { MAXIMUM_CONTEXT_CHARACTERS, prepareRewriteRequest, serializeContext, stripFencedCodeBlocks } from "../src/rewrite.ts";
+import {
+  MAXIMUM_CONTEXT_CHARACTERS,
+  prepareRewriteRequest,
+  serializeContext,
+  stripFencedCodeBlocks,
+} from "../src/rewrite.ts";
 
 type AgentMessage = AgentEndEvent["messages"][number];
 
@@ -79,7 +84,14 @@ test("uses only the last two user-led turns and excludes non-conversational cont
     entry("old-assistant", assistant([text("older answer")])),
     entry("previous-user", user([text("previous user\n~~~\nhidden\n~~~\nkept")])),
     entry("tool-result", toolResult()),
-    { type: "custom", id: "custom", parentId: "tool-result", timestamp: "now", customType: "other", data: { text: "exclude" } },
+    {
+      type: "custom",
+      id: "custom",
+      parentId: "tool-result",
+      timestamp: "now",
+      customType: "other",
+      data: { text: "exclude" },
+    },
     entry("previous-assistant", assistant([text("previous answer")])),
     entry("current-user", user("current user")),
     entry("intermediate", intermediate),

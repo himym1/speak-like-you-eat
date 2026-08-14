@@ -32,17 +32,26 @@ export function evaluateMechanicalChecks(fixture: BenchmarkFixture, result: Benc
   const sourceLength = Math.max(1, fixture.request.target.length);
   const unchanged = output === fixture.request.target;
   const missingLiterals = fixture.expectations.requiredLiterals.filter((literal) => !output.includes(literal));
-  const literalOccurrenceShortfalls = (fixture.expectations.requiredLiteralOccurrences ?? []).flatMap(({ literal, required }) => {
-    const actual = countOccurrences(output, literal);
-    return actual < required ? [{ literal, actual, required }] : [];
-  });
+  const literalOccurrenceShortfalls = (fixture.expectations.requiredLiteralOccurrences ?? []).flatMap(
+    ({ literal, required }) => {
+      const actual = countOccurrences(output, literal);
+      return actual < required ? [{ literal, actual, required }] : [];
+    },
+  );
   const missingFencedBlocks = (fixture.expectations.exactFencedBlocks ?? []).filter((block) => !output.includes(block));
-  const missingMarkdownMarkers = (fixture.expectations.requiredMarkdownMarkers ?? []).filter((marker) => !output.includes(marker));
+  const missingMarkdownMarkers = (fixture.expectations.requiredMarkdownMarkers ?? []).filter(
+    (marker) => !output.includes(marker),
+  );
   const lowercaseOutput = output.toLowerCase();
-  const forbiddenText = fixture.expectations.forbiddenText.filter((text) => lowercaseOutput.includes(text.toLowerCase()));
-  const likelyPreamble = /^(?:here(?:'s| is)(?: [^:\n]{0,80})?|sure(?: [^:\n]{0,80})?|rewritten text|rewrite):/i.test(output.trim());
+  const forbiddenText = fixture.expectations.forbiddenText.filter((text) =>
+    lowercaseOutput.includes(text.toLowerCase()),
+  );
+  const likelyPreamble = /^(?:here(?:'s| is)(?: [^:\n]{0,80})?|sure(?: [^:\n]{0,80})?|rewritten text|rewrite):/i.test(
+    output.trim(),
+  );
   const expectedChangeSatisfied =
-    result.outcome === "success" && (fixture.expectations.expectedChange ? !unchanged : fixture.expectations.allowUnchanged || !unchanged);
+    result.outcome === "success" &&
+    (fixture.expectations.expectedChange ? !unchanged : fixture.expectations.allowUnchanged || !unchanged);
 
   return {
     unchanged,
@@ -54,7 +63,8 @@ export function evaluateMechanicalChecks(fixture: BenchmarkFixture, result: Benc
     forbiddenText,
     likelyPreamble,
     maximumLengthRatioSatisfied:
-      fixture.expectations.maximumLengthRatio === undefined || output.length / sourceLength <= fixture.expectations.maximumLengthRatio,
+      fixture.expectations.maximumLengthRatio === undefined ||
+      output.length / sourceLength <= fixture.expectations.maximumLengthRatio,
     expectedChangeSatisfied,
     timeoutOrError: result.outcome !== "success",
   };
@@ -85,7 +95,9 @@ export async function writeBlindReport(
   corpus: readonly BenchmarkFixture[] = BENCHMARK_CORPUS,
 ): Promise<{ reportPath: string; mappingPath: string }> {
   await mkdir(workDirectory, { recursive: true });
-  const candidates = [...new Set(results.map((result) => `${result.canonicalModel}#${result.requestedThinking}`))].sort();
+  const candidates = [
+    ...new Set(results.map((result) => `${result.canonicalModel}#${result.requestedThinking}`)),
+  ].sort();
   const mappingPath = join(workDirectory, "blind-map.json");
   const mapping = assignCandidateLabels(candidates, await readMapping(mappingPath), randomIndex);
   const sections = corpus.flatMap((fixture) => {
@@ -109,7 +121,10 @@ export async function writeBlindReport(
   return { reportPath, mappingPath };
 }
 
-export async function readLocalResults(workDirectory: string, allowedCallIds: ReadonlySet<string>): Promise<BenchmarkResult[]> {
+export async function readLocalResults(
+  workDirectory: string,
+  allowedCallIds: ReadonlySet<string>,
+): Promise<BenchmarkResult[]> {
   const entries = await readdir(workDirectory).catch((error: NodeJS.ErrnoException) => {
     if (error.code === "ENOENT") return [] as string[];
     throw error;
@@ -158,7 +173,9 @@ async function readMapping(path: string): Promise<Record<string, string>> {
     if (typeof mapping !== "object" || mapping === null || Array.isArray(mapping)) {
       throw new Error("Blind candidate mapping must be an object.");
     }
-    return Object.fromEntries(Object.entries(mapping).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+    return Object.fromEntries(
+      Object.entries(mapping).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+    );
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return {};
@@ -178,9 +195,16 @@ function nextCandidateNumber(mapping: Readonly<Record<string, string>>): number 
   return largestNumber + 1;
 }
 
-function formatFixture(fixture: BenchmarkFixture, results: readonly BenchmarkResult[], mapping: Readonly<Record<string, string>>): string {
+function formatFixture(
+  fixture: BenchmarkFixture,
+  results: readonly BenchmarkResult[],
+  mapping: Readonly<Record<string, string>>,
+): string {
   const candidates = results
-    .map((result) => ({ result, label: mapping[`${result.canonicalModel}#${result.requestedThinking}`] ?? "Candidate ??" }))
+    .map((result) => ({
+      result,
+      label: mapping[`${result.canonicalModel}#${result.requestedThinking}`] ?? "Candidate ??",
+    }))
     .sort((left, right) => left.label.localeCompare(right.label));
   return [
     `## ${fixture.source}`,

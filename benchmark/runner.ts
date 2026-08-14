@@ -217,7 +217,9 @@ export async function executeRow(
       ...baseResult(row, elapsedMs, "success", result.response.stopReason),
       textBlocks,
       usage,
-      ...(price === undefined || usage === undefined ? {} : { openRouterEquivalentCost: calculateOpenRouterCost(usage, price) }),
+      ...(price === undefined || usage === undefined
+        ? {}
+        : { openRouterEquivalentCost: calculateOpenRouterCost(usage, price) }),
     };
   } finally {
     if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
@@ -245,7 +247,9 @@ export function isSettledResult(result: BenchmarkResult): boolean {
   if (result.outcome === "success" || result.outcome === "timeout") {
     return true;
   }
-  return result.outcome === "error" && (result.errorCategory === "provider_error" || result.errorCategory === "unknown");
+  return (
+    result.outcome === "error" && (result.errorCategory === "provider_error" || result.errorCategory === "unknown")
+  );
 }
 
 export function shouldStopAfterResult(result: BenchmarkResult): boolean {
@@ -254,7 +258,9 @@ export function shouldStopAfterResult(result: BenchmarkResult): boolean {
   }
   return (
     result.outcome === "error" &&
-    (result.errorCategory === "aborted" || result.errorCategory === "authentication" || result.errorCategory === "rate_limit")
+    (result.errorCategory === "aborted" ||
+      result.errorCategory === "authentication" ||
+      result.errorCategory === "rate_limit")
   );
 }
 
@@ -295,7 +301,9 @@ export function validateRuntimeSupport(runtime: ModelRuntimeLike, manifest: Benc
       row.actualPiThinking === "xhigh" ||
       row.actualPiThinking === "max";
     if (mappedThinking === undefined && needsExplicitMapping) {
-      throw new Error(`Configured model does not map ${row.actualPiThinking} to ${row.expectedProviderThinking}: ${row.canonicalModel}`);
+      throw new Error(
+        `Configured model does not map ${row.actualPiThinking} to ${row.expectedProviderThinking}: ${row.canonicalModel}`,
+      );
     }
     if (mappedThinking !== undefined && mappedThinking !== row.expectedProviderThinking) {
       throw new Error(`Configured model maps ${row.actualPiThinking} unexpectedly: ${row.canonicalModel}`);
@@ -323,9 +331,11 @@ export function sanitizeError(error: unknown): NonNullable<BenchmarkResult["erro
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
     if (message.includes("abort")) return "aborted";
-    if (message.includes("auth") || message.includes("credential") || message.includes("unauthorized")) return "authentication";
+    if (message.includes("auth") || message.includes("credential") || message.includes("unauthorized"))
+      return "authentication";
     if (message.includes("rate") || message.includes("429")) return "rate_limit";
-    if (message.includes("provider") || message.includes("http") || message.includes("network")) return "provider_error";
+    if (message.includes("provider") || message.includes("http") || message.includes("network"))
+      return "provider_error";
   }
   return "unknown";
 }
@@ -339,7 +349,12 @@ async function createIsolatedRuntime(cwd: string): Promise<{ runtime: ModelRunti
   return { runtime: session.modelRuntime, dispose: () => session.dispose() };
 }
 
-function baseResult(row: ManifestRow, elapsedMs: number, outcome: BenchmarkResult["outcome"], stopReason: string | null): BenchmarkResult {
+function baseResult(
+  row: ManifestRow,
+  elapsedMs: number,
+  outcome: BenchmarkResult["outcome"],
+  stopReason: string | null,
+): BenchmarkResult {
   return {
     callId: row.callId,
     fixture: row.fixture,

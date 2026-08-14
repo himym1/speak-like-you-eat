@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ExtensionCommandContext, ModelRegistry } from "@earendil-works/pi-coding-agent";
-import { filterModelCandidates, formatModelCandidate, type ModelCandidate, pickModel, selectModelCandidates } from "../src/model-picker.ts";
+import {
+  filterModelCandidates,
+  formatModelCandidate,
+  type ModelCandidate,
+  pickModel,
+  selectModelCandidates,
+} from "../src/model-picker.ts";
 import { createModelPickerDriver } from "./picker-driver.ts";
 
 type PiModel = NonNullable<ReturnType<ModelRegistry["find"]>>;
@@ -35,7 +41,11 @@ async function runPicker(scoped: ModelCandidate[], all: ModelCandidate[], inputs
     },
   } as unknown as ExtensionCommandContext;
 
-  return { result: await pickModel(context, scoped, all), renders: driver.renders, completionCount: driver.completionCount };
+  return {
+    result: await pickModel(context, scoped, all),
+    renders: driver.renders,
+    completionCount: driver.completionCount,
+  };
 }
 
 test("filters authenticated candidates, excludes malformed metadata, ignores scoped pinned thinking, and sorts by provider and id", () => {

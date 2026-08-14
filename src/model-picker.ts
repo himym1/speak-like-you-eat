@@ -1,6 +1,15 @@
 import type { ExtensionCommandContext, ModelRegistry, Theme } from "@earendil-works/pi-coding-agent";
 import { DynamicBorder } from "@earendil-works/pi-coding-agent";
-import { Container, type Focusable, fuzzyFilter, Input, type KeybindingsManager, Spacer, Text, type TUI } from "@earendil-works/pi-tui";
+import {
+  Container,
+  type Focusable,
+  fuzzyFilter,
+  Input,
+  type KeybindingsManager,
+  Spacer,
+  Text,
+  type TUI,
+} from "@earendil-works/pi-tui";
 import { lowestSupportedThinkingLevel, type ThinkingLevel } from "./model-completion.ts";
 
 type PiModel = NonNullable<ReturnType<ModelRegistry["find"]>>;
@@ -15,7 +24,10 @@ export type ModelCandidate = {
   thinkingLevel: ThinkingLevel;
 };
 
-export function selectModelCandidates(models: readonly PiModel[], hasConfiguredAuth: (model: PiModel) => boolean): ModelCandidate[] {
+export function selectModelCandidates(
+  models: readonly PiModel[],
+  hasConfiguredAuth: (model: PiModel) => boolean,
+): ModelCandidate[] {
   const candidates: ModelCandidate[] = [];
 
   for (const model of models) {
@@ -56,7 +68,8 @@ export async function pickModel(
   const initialScope: PickerScope = scopedCandidates.length > 0 ? "scoped" : "all";
 
   return ctx.ui.custom<ModelCandidate | undefined>(
-    (tui, theme, keybindings, done) => new ModelPicker(tui, theme, keybindings, scopedCandidates, allCandidates, initialScope, done),
+    (tui, theme, keybindings, done) =>
+      new ModelPicker(tui, theme, keybindings, scopedCandidates, allCandidates, initialScope, done),
   );
 }
 
@@ -166,7 +179,8 @@ class ModelPicker extends Container implements Focusable {
       return;
     }
 
-    this.selectedIndex = (this.selectedIndex + change + this.filteredCandidates.length) % this.filteredCandidates.length;
+    this.selectedIndex =
+      (this.selectedIndex + change + this.filteredCandidates.length) % this.filteredCandidates.length;
     this.updateContent();
     this.tui.requestRender();
   }

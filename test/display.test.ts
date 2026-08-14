@@ -3,7 +3,13 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import type { AgentEndEvent, EntryRenderer, ExtensionAPI, ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-agent";
+import type {
+  AgentEndEvent,
+  EntryRenderer,
+  ExtensionAPI,
+  ExtensionContext,
+  SessionEntry,
+} from "@earendil-works/pi-coding-agent";
 import { writeConfigAtomically } from "../src/config.ts";
 import speakLikeYouEat from "../src/index.ts";
 
@@ -224,7 +230,10 @@ test("does not call a model outside TUI or with missing, disabled, or unusable c
   await writeConfigAtomically(configPath, { enabled: true, model: { provider: "test", id: "model" } });
   const unauthenticated = createExtension();
   const unauthenticatedContext = createContext({ cwd: directory, branch, modelUsable: false });
-  await unauthenticated.endAgent({ type: "agent_end", messages: [target] } as AgentEndEvent, unauthenticatedContext.context);
+  await unauthenticated.endAgent(
+    { type: "agent_end", messages: [target] } as AgentEndEvent,
+    unauthenticatedContext.context,
+  );
 
   for (const [extension, testContext] of [
     [outside, outsideContext],
@@ -410,7 +419,9 @@ test("registers a safe persistent entry renderer", () => {
   assert.match(restored?.render(120).join("\n") ?? "", /🤌 Speak like you eat:/);
   assert.match(restored?.render(120).join("\n") ?? "", /Saved Markdown/);
   assert.equal(extension.appendedEntries.length, 0);
-  assert.doesNotThrow(() => extension.renderer?.({ ...entry, data: { old: true } }, { expanded: false }, theme as never));
+  assert.doesNotThrow(() =>
+    extension.renderer?.({ ...entry, data: { old: true } }, { expanded: false }, theme as never),
+  );
 });
 
 async function setupConfiguredDirectory(t: test.TestContext, enabled: boolean): Promise<string> {
@@ -426,7 +437,9 @@ async function setupConfiguredDirectory(t: test.TestContext, enabled: boolean): 
   return join(directory, "project");
 }
 
-function longAssistant(content: Array<{ type: "text"; text: string }> = [text("complete response ".repeat(20))]): AgentMessage {
+function longAssistant(
+  content: Array<{ type: "text"; text: string }> = [text("complete response ".repeat(20))],
+): AgentMessage {
   return { role: "assistant", content, stopReason: "stop", timestamp: 2 } as AgentMessage;
 }
 

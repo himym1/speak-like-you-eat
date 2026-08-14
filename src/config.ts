@@ -74,7 +74,11 @@ export async function readConfig(path: string): Promise<ConfigReadResult> {
   }
 }
 
-export async function loadEffectiveConfig(globalPath: string, projectPath: string, projectTrusted: boolean): Promise<EffectiveConfig> {
+export async function loadEffectiveConfig(
+  globalPath: string,
+  projectPath: string,
+  projectTrusted: boolean,
+): Promise<EffectiveConfig> {
   if (projectTrusted) {
     const projectConfig = await readConfig(projectPath);
     if (projectConfig.kind === "invalid") {

@@ -27,7 +27,10 @@ export async function buildPhaseTwoManifest(): Promise<BenchmarkManifest> {
   });
 }
 
-export async function writePhaseTwoManifest(manifest: BenchmarkManifest, path: URL = phaseTwoManifestUrl()): Promise<void> {
+export async function writePhaseTwoManifest(
+  manifest: BenchmarkManifest,
+  path: URL = phaseTwoManifestUrl(),
+): Promise<void> {
   await writeManifest(manifest, path);
 }
 
