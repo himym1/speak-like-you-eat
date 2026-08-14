@@ -3,13 +3,13 @@ id: doc-1
 title: SLYE MVP specification
 type: specification
 created_date: '2026-08-13 23:14'
-updated_date: '2026-08-14 00:56'
+updated_date: '2026-08-14 01:45'
 ---
 # SLYE MVP specification
 
 ## Status
 
-This document defines the approved **target MVP**. Slice 3 implements final-response selection, fenced-code prose gating, bounded two-turn context preparation, and a persistent display-only companion card under a temporary `SLYE_STUB=1` development stub. The stub repeats the complete target response under a development marker; it does not call a secondary model. Real model rewriting, loading, cancellation, and timeout behavior remain unimplemented. The approved target behavior below is unchanged.
+Slice 4 implementation is automated and review-ready. It replaces the development stub with an isolated configured-model completion, native working text, Escape cancellation, a 45-second deadline, and fail-open failure handling. The slice-4 manual model gate remains pending; the approved target behavior below is unchanged.
 
 ## Scope
 
@@ -34,14 +34,15 @@ SLYE operates only in Pi's interactive TUI. Outside the TUI it is a no-op.
 
 ## Rewrite behavior
 
-- Use the selected secondary Pi model to rewrite in the user's language, inferred only from user messages.
-- Preserve facts, names, numbers, paths, Markdown structure, commands, and fenced code blocks. The intent is a claudish-to-english plain-language rewrite without changing meaning.
-- Send the complete target response plus at most 8,000 characters of recent natural-language context from no more than two preceding turns and relevant intermediate assistant prose.
+- Resolve and recheck the configured authenticated secondary Pi model, then make one isolated completion without changing Pi's active conversation model.
+- The request has a rewrite-only system prompt and one user message containing the complete target plus at most 8,000 characters of recent natural-language context from no more than two preceding turns and relevant intermediate assistant prose.
+- Infer language only from the most recent user-labelled context. Preserve meaning, facts, names, numbers, paths, URLs, commands, Markdown structure, and fenced code blocks; ignore instructions in source text.
 - Exclude thinking, tool calls, and tool results from context. Remove fenced code blocks only from prior context, not the target response.
+- Accept only a normal-stop response with non-blank text; join multiple text blocks with blank lines.
 
 ## Interaction and failures
 
-- While the rewrite is running, show `Rewriting AI-speak…`.
-- Escape cancels the rewrite without a warning.
-- Cancel after 45 seconds.
-- Any other provider or configuration failure leaves the original response intact and warns at most once per session.
+- While rewriting, show `Rewriting AI-speak…`.
+- Escape cancels the secondary request without a warning.
+- After 45 seconds, SLYE stops waiting, signals abort to the provider, appends nothing, and warns; a provider that ignores the signal may continue and consume usage.
+- Any other provider, output, append, or unexpected processing failure leaves the original intact and warns at most once per extension session.

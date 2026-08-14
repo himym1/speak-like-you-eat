@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@zambo'
 created_date: '2026-08-13 23:04'
-updated_date: '2026-08-14 00:57'
+updated_date: '2026-08-14 01:34'
 labels: []
 dependencies: []
 references:
@@ -47,6 +47,8 @@ Create an installable Pi package that rewrites completed AI responses into clear
 6. Before each non-trivial commit, run taste-reviewer and spec-reviewer together, resolve every must-fix finding, verify the diff and checks directly, then commit that runnable slice. Before completion, run docs-reviewer because authoritative behavior/docs changed, then final-reviewer against the branch as a whole.
 
 Slice 1 tooling correction: Backlog CLI 1.50.1 can create but cannot update decisions. Keep accepted decision-1 as the governed decision record, never edit its Markdown directly, record the temporarily unrepresentable rationale in TASK-1 implementation notes, and continue the remaining slice instead of blocking package work.
+
+Slice 4 implementation detail: remove the SLYE_STUB path; while agent_end is still active, reuse Pi's native working indicator with the exact message Rewriting AI-speak… and the active agent AbortSignal for Escape; race an isolated configured-model completion against that cancellation and a local 45-second deadline; accept only a non-empty normal-stop text response; append it display-only; restore the working message in finally; and cover success, prompt payload, cancellation, timeout, provider failure, and warning-once behavior. Replace the cryptic model-deduplication NUL key with explicit provider/id comparison in the same slice.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -67,4 +69,8 @@ Slice 2 review-required branch coverage was added for invalid effective files, t
 Manual slice-2 gate passed on 2026-08-14 in the sibling sandbox: startup warning, authenticated model picker, project-local `slye.json`, `/slye off`, and `/slye on` all behaved as specified without submitting a prompt or making a model request.
 
 Slice 3 automated verification passed on 2026-08-14: agent_end final-response selection, fenced-prose gating, bounded two-turn context preparation, display-only slye.rewrite rendering, and the SLYE_STUB=1 development marker are covered by 27 Node tests. The sandbox transcript/resume gate in doc-2 remains pending; this slice makes no secondary-model request.
+
+Manual slice-3 gate passed on 2026-08-14 in the sibling sandbox: one persistent companion card appeared after the unchanged original, and resuming the same session rendered the saved card without appending a duplicate. Zambo also requested removal of the unnecessary \u0000 composite-key trick; the slice-4 cleanup will use explicit provider/id comparison.
+
+Slice 4 automated implementation is review-ready on 2026-08-14: the configured authenticated model is called through an isolated completion with a rewrite-only prompt, working indicator, user cancellation, a 45-second local deadline, response validation, display-only append, duplicate suppression, and warning-once fail-open handling. Focused Node tests pass; the slice-4 manual model gate in doc-2 remains pending.
 <!-- SECTION:NOTES:END -->

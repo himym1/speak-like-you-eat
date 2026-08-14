@@ -3,7 +3,7 @@ id: doc-2
 title: SLYE sandbox manual checks
 type: guide
 created_date: '2026-08-13 23:14'
-updated_date: '2026-08-14 00:56'
+updated_date: '2026-08-14 01:34'
 ---
 # SLYE sandbox manual checks
 
@@ -70,21 +70,19 @@ Do not submit a prompt or make a model request:
 4. Start Pi again, run `/slye off`, and verify `.pi/slye.json` now has `"enabled": false` while retaining the model.
 5. Run `/slye on`, confirm it restores the saved model without opening a picker, then exit. Do not submit a prompt or make a model request at any point.
 
-### Slice 3 — display stub
+### Slice 4 — real rewrite, cancellation, and resume
 
-Use the existing sandbox project `.pi/slye.json` created during the slice-2 check; do not edit or delete it. From the sandbox, run:
+Use the existing sandbox project `.pi/slye.json` created during the slice-2 check; do not edit or delete it. Run:
 
 ```sh
 cd ../speak_like_you_eat_sandbox
-SLYE_STUB=1 pi --approve
+pi --approve
 ```
 
-1. Submit one prompt expected to produce a normally completed final answer with more than 200 prose characters.
-2. Verify the original answer remains visible and exactly one `🤌 Speak like you eat:` card appears after it.
-3. Verify the card begins with `Development stub — no secondary model called.` and repeats the complete target response.
-4. Exit, then resume or reopen the same session. Verify the card still renders and that resume alone appends no duplicate card.
-
-This makes one primary-model request and no secondary-model request.
+1. Submit one prompt expected to produce a normally completed final answer with more than 200 prose characters. This makes one primary request and one secondary rewrite request.
+2. Verify the unchanged original appears first, then the exact working text `Rewriting AI-speak…`, then one plain-language `🤌 Speak like you eat:` card. Verify the card is in the latest user's language and preserves technical literals, Markdown, and fenced code.
+3. Submit another eligible answer and press Escape while its secondary rewrite is running. A started secondary request may consume provider usage. Verify there is no card and no warning for that answer.
+4. Exit, then resume or reopen the first session. Verify the saved card still renders and that resume alone appends no duplicate card.
 
 ### Later slices
 

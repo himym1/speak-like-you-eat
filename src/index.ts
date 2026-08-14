@@ -18,7 +18,8 @@ import {
   type ModelReference,
   type SlyeConfig,
 } from "./config.ts";
-import { prepareRewriteRequest, type RewriteRequest } from "./rewrite.ts";
+import { completeRewrite, type RewriteOutcome } from "./model-rewrite.ts";
+import { prepareRewriteRequest } from "./rewrite.ts";
 
 const USAGE = "Usage: /slye model|on|off";
 const MODEL_SCOPE_ALL = "All projects";
@@ -46,24 +47,24 @@ export function selectModelCandidates(
   hasConfiguredAuth: (model: PiModel) => boolean,
 ): ModelCandidate[] {
   const models = scopedModels.length === 0 ? availableModels : scopedModels.map(({ model }) => model);
-  const candidates = new Map<string, ModelCandidate>();
+  const candidates: ModelCandidate[] = [];
 
   for (const model of models) {
     if (!hasConfiguredAuth(model)) {
       continue;
     }
-
-    const key = `${model.provider}\u0000${model.id}`;
-    if (!candidates.has(key)) {
-      candidates.set(key, {
-        provider: model.provider,
-        id: model.id,
-        label: formatModel(model),
-      });
+    if (candidates.some((candidate) => candidate.provider === model.provider && candidate.id === model.id)) {
+      continue;
     }
+
+    candidates.push({
+      provider: model.provider,
+      id: model.id,
+      label: formatModel(model),
+    });
   }
 
-  return [...candidates.values()].sort((left, right) => {
+  return candidates.sort((left, right) => {
     if (left.provider !== right.provider) {
       return left.provider < right.provider ? -1 : 1;
     }
@@ -77,7 +78,7 @@ export function selectModelCandidates(
 export default function speakLikeYouEat(pi: ExtensionAPI): void {
   let hasShownStartupWarning = false;
   let hasShownProcessingWarning = false;
-  const appendedTargetEntryIds = new Set<string>();
+  const processedTargetEntryIds = new Set<string>();
 
   pi.registerEntryRenderer<RewriteEntryData>(REWRITE_ENTRY_TYPE, (entry, _options, theme) => {
     const data = parseRewriteEntryData(entry.data);
@@ -117,32 +118,45 @@ export default function speakLikeYouEat(pi: ExtensionAPI): void {
     if (ctx.mode !== "tui") {
       return;
     }
-    if (process.env.SLYE_STUB !== "1") {
-      return;
-    }
 
     try {
       const effectiveConfig = await loadConfig(ctx);
       if (effectiveConfig.kind !== "valid" || !effectiveConfig.config.enabled) {
         return;
       }
-      if (!hasUsableModel(ctx, effectiveConfig.config.model)) {
+
+      const model = ctx.modelRegistry.find(effectiveConfig.config.model.provider, effectiveConfig.config.model.id);
+      if (model === undefined || !ctx.modelRegistry.hasConfiguredAuth(model)) {
         return;
       }
 
       const prepared = prepareRewriteRequest(event.messages, ctx.sessionManager.getBranch());
-      if (prepared === undefined || appendedTargetEntryIds.has(prepared.entryId)) {
+      if (prepared === undefined || processedTargetEntryIds.has(prepared.entryId)) {
+        return;
+      }
+      processedTargetEntryIds.add(prepared.entryId);
+
+      ctx.ui.setWorkingMessage("Rewriting AI-speak…");
+      let outcome: RewriteOutcome;
+      try {
+        outcome = await completeRewrite(prepared.request, ctx.signal, (request, options) =>
+          ctx.modelRegistry.complete(model, request, options),
+        );
+      } finally {
+        ctx.ui.setWorkingMessage();
+      }
+
+      if (outcome.kind === "cancelled") {
+        return;
+      }
+      if (outcome.kind === "failed") {
+        notifyProcessingWarning(ctx);
         return;
       }
 
-      const display = createDevelopmentStub(prepared.request);
-      pi.appendEntry<RewriteEntryData>(REWRITE_ENTRY_TYPE, { display });
-      appendedTargetEntryIds.add(prepared.entryId);
+      pi.appendEntry<RewriteEntryData>(REWRITE_ENTRY_TYPE, { display: outcome.display });
     } catch {
-      if (!hasShownProcessingWarning) {
-        hasShownProcessingWarning = true;
-        ctx.ui.notify("SLYE could not prepare the development rewrite.", "warning");
-      }
+      notifyProcessingWarning(ctx);
     }
   });
 
@@ -183,6 +197,15 @@ export default function speakLikeYouEat(pi: ExtensionAPI): void {
 
     hasShownStartupWarning = true;
     ctx.ui.notify(message, "warning");
+  }
+
+  function notifyProcessingWarning(ctx: ExtensionContext): void {
+    if (hasShownProcessingWarning) {
+      return;
+    }
+
+    hasShownProcessingWarning = true;
+    ctx.ui.notify("SLYE could not create a rewrite.", "warning");
   }
 }
 
@@ -326,10 +349,6 @@ async function saveEnabledConfig(
   }
 
   ctx.ui.notify(`SLYE enabled with ${formatModel(model)} for ${scope}.`, "info");
-}
-
-function createDevelopmentStub(request: RewriteRequest): string {
-  return `Development stub — no secondary model called.\n\n${request.target}`;
 }
 
 function parseRewriteEntryData(data: unknown): RewriteEntryData | undefined {
