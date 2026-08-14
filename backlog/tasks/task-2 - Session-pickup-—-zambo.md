@@ -5,7 +5,7 @@ status: To Do
 assignee:
   - '@zambo'
 created_date: '2026-08-13 23:04'
-updated_date: '2026-08-14 17:56'
+updated_date: '2026-08-14 21:51'
 labels:
   - continuity
   - handoff
@@ -19,17 +19,16 @@ ordinal: 2000
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
 WHERE WE LEFT OFF
-2026-08-14. Branch `main`; report commit `e55f85b` (`docs: publish SLYE benchmark results`) followed by the commit containing this pickup snapshot. No Git remote is configured, so nothing is pushed. The tracked tree is clean. The new governed report is `backlog/docs/specs/doc-4 - SLYE-benchmark-results.md`, linked from README/doc-1/doc-3 and included in the exact nine-file package. Adversarial raw-row review corrected historical aggregate errors: phase one costs USD 0.06482709 with overall median 3,800.5ms and mathematically correct per-candidate medians; phase two costs USD 0.00238211. FINDINGS.md and TASK-3 preserve the falsified old values and corrections. `npm run check` passes 56 tests, both dry-runs retain approved fingerprints/budgets, and the package allowlist is nine files. Zambo then requested three follow-ups: enforce low/off thinking for the translator, guarantee it does not load AGENTS.md or other automatic Pi context, and let `/slye model` switch between scoped and all authenticated Pi models. Pi docs and real code were inspected. Current SLYE already makes a direct `ctx.modelRegistry.complete` call with only its rewrite Context and does not create an AgentSession/ResourceLoader or load tools/files; exact payload tests exist. Current picker uses scoped models whenever nonempty and all authenticated available models only when scope is empty. Pi's built-in selector convention uses Tab to switch scoped/all. Current SLYE completion does not explicitly select thinking.
+2026-08-14. Branch `main` at `f2cc50c` (`chore: close SLYE MVP`), followed by the commit containing this pickup snapshot. No Git remote is configured, so nothing is pushed; the tracked tree is clean after the snapshot commit. The installable SLYE MVP is complete: TASK-1, TASK-1.1, TASK-3, and TASK-4 are Done. Runtime behavior is authoritative in `backlog/docs/specs/doc-1 - SLYE-MVP-specification.md`; benchmark evidence is in doc-4; sandbox and benchmark procedures are doc-2/doc-3. SLYE preserves the original response, appends a persistent display-only rewrite, derives the selected model's lowest supported thinking level, uses a searchable scoped-first/all-authenticated picker, sends one isolated direct-provider payload, and fails open. The once-per-branch docs-reviewer found no must-fix drift and the final-reviewer returned `merge` with no must-fix findings. Final verification passed Biome, TypeScript, 73 tests, both unchanged benchmark dry-run fingerprints, exact 11-file packaging, fresh tarball discovery, and the no-request sandbox picker check. No additional model/provider call was made during model-controls closure.
 
 WHAT'S NEXT
-1. Wait for zambo's answers to the active design round: Q1 prefer off, fall back to low, and reject models supporting neither; Q2 open scoped by default and use Tab for a non-persistent switch to all authenticated eligible models; Q3 document/test the isolation boundary SLYE controls while acknowledging other installed extensions/provider-side behavior is outside its control.
-2. After those prerequisites settle, ask only dependent questions if any (for example read-only thinking labels and unsupported saved-model behavior), confirm shared understanding, then create/plan a normal Backlog task before implementation. Do not implement until grilling is complete.
-3. Keep feature work separate from `e55f85b`. Likely code areas are `src/index.ts`, `src/model-rewrite.ts`, a small dedicated picker module if custom TUI is needed, onboarding/model-rewrite tests, README/doc-1/doc-4, and package smoke tests. Use the Pi custom TUI SelectList/Input pattern and public APIs only; do not import internal `dist/modes/interactive/components/model-selector`.
-4. TASK-1 remains In Progress and still needs final docs-reviewer/final-reviewer/finalization after these user-requested hardening changes.
+1. No required MVP work remains. Start with `git status -sb` and `backlog task view TASK-1 --plain` only if re-verifying closure.
+2. If zambo wants distribution, create and approve a new Backlog task before configuring a Git remote, pushing, or publishing to npm; none of those actions has happened.
+3. Treat any product change as new work: read doc-1, preserve the direct-completion isolation boundary and fail-open behavior, and run the normal plan/review workflow.
 
 WAITING ON / GATED BY
-As of 2026-08-14, implementation of the three follow-ups is gated only by zambo's answers to Q1-Q3. No model call is approved or needed. A provider-neutral way to enforce thinking must use supported public Pi APIs and model capability metadata; do not rely on a private ModelRegistry runtime field. The forgotten earlier side note is no longer presumed separate because these three items may be it, but do not assume that unless zambo confirms.
+Nothing blocks the completed MVP. Git hosting and npm publication are deliberately unconfigured and require a future user decision plus any needed credentials. No further benchmark or model calls are approved or needed.
 
 VERIFY
-Run `git status -sb`; `git log --oneline -5`; `npm run check`; `npm pack --dry-run --json`; `backlog doc view doc-4 --plain`; `backlog task view TASK-1 --plain`; and inspect `src/index.ts`, `src/model-rewrite.ts`, `test/onboarding.test.ts`, and Pi's current models/extensions/TUI docs before planning implementation.
+Run `git status -sb`; `git log --oneline -6`; `git remote -v`; `backlog task view TASK-1 --plain`; `backlog task view TASK-1.1 --plain`; `npm run check`; `npm run benchmark:dry-run`; `npm run benchmark:phase-2:dry-run`; and `npm pack --dry-run --json`. Expected: clean `main`, HEAD at the pickup commit after `f2cc50c`, no remotes, both tasks Done, 73 tests, fingerprints `80d7d401fe9862d3d558efc4ba8b674014dd3e7e975f02d77cc3b37c30fbd759` and `59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728`, and exactly 11 packed files.
 <!-- SECTION:DESCRIPTION:END -->
