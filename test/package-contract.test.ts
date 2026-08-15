@@ -32,6 +32,8 @@ const PACKED_FILES = [
   "src/rewrite.ts",
 ];
 
+const STABLE_SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+
 type PackageManifest = {
   name: string;
   version: string;
@@ -45,17 +47,27 @@ type PackageManifest = {
   pi: { extensions: string[]; image: string };
 };
 
+type PackageLock = {
+  version: string;
+  packages: { "": { version: string } };
+};
+
 const runCommand = promisify(execFile);
 
 test("the package manifest declares public release metadata, its extension, README-linked governed documents, and the 12-file public allowlist", async () => {
   const packageUrl = new URL("../package.json", import.meta.url);
   const packageJson = JSON.parse(await readFile(packageUrl, "utf8")) as PackageManifest;
+  const packageLockUrl = new URL("../package-lock.json", import.meta.url);
+  const packageLock = JSON.parse(await readFile(packageLockUrl, "utf8")) as PackageLock;
   const extensionPath = "./src/index.ts";
+
+  assert.match(packageJson.version, STABLE_SEMVER);
+  assert.equal(packageLock.version, packageJson.version);
+  assert.equal(packageLock.packages[""].version, packageJson.version);
 
   assert.deepEqual(
     {
       name: packageJson.name,
-      version: packageJson.version,
       author: packageJson.author,
       license: packageJson.license,
       repository: packageJson.repository.url,
@@ -65,7 +77,6 @@ test("the package manifest declares public release metadata, its extension, READ
     },
     {
       name: "speak-like-you-eat",
-      version: "0.1.1",
       author: "wtfzambo",
       license: "MIT",
       repository: "git+https://github.com/wtfzambo/speak-like-you-eat.git",

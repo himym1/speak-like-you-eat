@@ -1,15 +1,24 @@
 ---
 id: TASK-6
 title: Automate GitHub and npm releases
-status: To Do
+status: In Progress
 assignee:
   - '@zambo'
 created_date: '2026-08-15 17:25'
+updated_date: '2026-08-15 17:54'
 labels: []
 dependencies: []
 references:
   - 'https://github.com/wtfzambo/spotme/tree/main/.github/workflows'
   - 'https://github.com/googleapis/release-please-action'
+modified_files:
+  - test/package-contract.test.ts
+  - release-please-config.json
+  - .release-please-manifest.json
+  - .github/workflows/pr.yml
+  - .github/workflows/release.yml
+  - .github/workflows/publish.yml
+  - backlog/docs/runbooks/doc-5 - SLYE-release-procedure.md
 ordinal: 7000
 ---
 
@@ -27,3 +36,26 @@ Add a reviewed release pipeline analogous to SpotMe: Release Please manages vers
 - [ ] #4 Workflow permissions, concurrency, release metadata, and npm tags are explicit; documentation explains Conventional Commits and the one-time npm trusted-publisher setup.
 - [ ] #5 Workflow configuration is validated locally where possible and reviewed without publishing an unplanned package version.
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Make the package-contract version assertion release-compatible: require stable SemVer and equality among package.json, the lockfile root version, and the lockfile root package version, while preserving the exact 12-file public allowlist.
+2. Bootstrap stable Release Please from the existing v0.1.1 release with release-please-config.json and .release-please-manifest.json. Keep package.json and package-lock.json at 0.1.1, use v-prefixed component-free tags, and add no prerelease/next behavior.
+3. Add .github/workflows/pr.yml for pull requests and manual dispatch. With least permissions and cancellable per-ref concurrency, run Node 24, npm ci, npm run check, both no-call benchmark dry-runs, fingerprint/manifest cleanliness checks, and exact package inspection.
+4. Add .github/workflows/release.yml for main pushes and manual dispatch. Run googleapis/release-please-action@v4 with the explicit config/manifest and GITHUB_TOKEN. Configure the one-time GitHub Actions setting that allows GITHUB_TOKEN to create Release Please PRs while keeping default workflow permissions read-only. When and only when a stable release is created, send a repository_dispatch containing its exact vX.Y.Z tag. Never dispatch merely because a release PR exists.
+5. Add .github/workflows/publish.yml for that repository_dispatch and a required manual recovery tag. Grant only contents:read and id-token:write, serialize publication, reject non-stable or ambiguous tags, require an existing non-draft, non-prerelease GitHub Release whose returned tag exactly matches, check out the exact tag, verify its commit is on main and its version matches package.json and both lockfile versions, install and verify npm 11.19.0, rerun all no-call release gates, stop if the version already exists without checkout artifacts, and publish only npm latest through OIDC. Do not reference NPM_TOKEN/NODE_AUTH_TOKEN or support next/prerelease.
+6. Create a governed release runbook through Backlog CLI. Document Conventional Commits, stable-only release flow, the one-time read-only-default GitHub Actions PR-creation setting, the exact npm 11.19.0 trusted-publisher registration for owner wtfzambo/repository speak-like-you-eat/workflow publish.yml, setup ordering, normal verification, immutable npm versions, and exact-tag manual recovery.
+7. Validate JSON/YAML/workflows locally where possible, run the complete no-call gate, prove the npm tarball remains exactly 12 files and the benchmark manifests/fingerprints remain unchanged, and confirm package/lock versions remain 0.1.1. Do not dispatch a workflow, create a release, move a tag, or publish a package in this task.
+8. After review and commit/push, verify the release workflow creates no release from the chore-only history, then configure npm trusted publishing once through npm's 2FA flow. Preserve the unrelated dirty TASK-2 pickup file throughout.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+The user chose the simplest stable-only policy on 2026-08-15: no npm prereleases and no next tag. Keep SpotMe's repository_dispatch bridge, but pass and validate the exact release tag instead of publishing the current main branch implicitly.
+
+Implemented stable Release Please, PR/release/publish workflows, package-version contract coverage, and the governed release runbook. Validated JSON/YAML, npm ci/check, both no-call dry-run fingerprints, manifest cleanliness, and the 12-file package artifact without publishing.
+
+Correction pass: publish.yml now pins and verifies npm 11.19.0, fetches main directly into refs/remotes/origin/main, requires a matching existing non-draft, non-prerelease GitHub Release through gh with read-only contents access, and stores npm version-check files under RUNNER_TEMP. The runbook records the one-time GitHub Actions PR-creation setting while retaining read-only default workflow permissions and workflow-level least permissions.
+<!-- SECTION:NOTES:END -->
