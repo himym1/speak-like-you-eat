@@ -34,6 +34,18 @@ pi install -l npm:speak-like-you-eat
 
 SLYE automatically uses the selected model's lowest supported thinking level. Only normally completed final responses with at least 200 prose characters outside fenced code are eligible.
 
+### Recommended models
+
+I ran a benchmark with human (me) evaluation to see how different cheap AI models would handle the "translation" part.
+
+But long story short, use cheap-ish, fast models with low/no reasoning (SLYE already sets reasoning for you).
+
+Models that I recommend:
+
+- **GPT 5.6 Terra** - best overall in my benchmarks but not the fastest
+- **Deepseek V4 Flash** - fast, good accuracy
+- **GPT OSS 120b** - fast, cheapest, good accuracy
+
 ## What SLYE guarantees
 
 - The original response stays visible and unchanged. The display-only card never enters LLM context.
