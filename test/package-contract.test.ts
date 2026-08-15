@@ -65,7 +65,7 @@ test("the package manifest declares public release metadata, its extension, READ
     },
     {
       name: "speak-like-you-eat",
-      version: "0.1.0",
+      version: "0.1.1",
       author: "wtfzambo",
       license: "MIT",
       repository: "git+https://github.com/wtfzambo/speak-like-you-eat.git",

@@ -36,15 +36,15 @@ SLYE automatically uses the selected model's lowest supported thinking level. On
 
 ### Recommended models
 
-I ran a benchmark with human (me) evaluation to see how different cheap AI models would handle the "translation" part.
+I ran a small, human-scored benchmark (me) to see how different cheap AI models would handle the "translation" part.
 
 But long story short, use cheap-ish, fast models with low/no reasoning (SLYE already sets reasoning for you).
 
 Models that I recommend:
 
-- **GPT 5.6 Terra** - best overall in my benchmarks but not the fastest
-- **Deepseek V4 Flash** - fast, good accuracy
-- **GPT OSS 120b** - fast, cheapest, good accuracy
+- **Terra** - best overall in this benchmark but not the fastest
+- **DeepSeek V4 Flash** - fast, good accuracy
+- **GPT-OSS 120B** - cheapest of the three with good overall results, but more sensitive to prompt wording in this small benchmark
 
 ## What SLYE guarantees
 
