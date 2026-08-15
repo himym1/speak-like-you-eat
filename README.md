@@ -1,59 +1,59 @@
-# Speak like you eat
+# SLYE - Speak like you eat
 
-SLYE is a Pi package that adds a plain-language companion rewrite after an eligible completed response. It runs only in Pi's interactive TUI: the original response stays visible and unchanged, and the `🤌 Speak like you eat:` card is display-only and never enters LLM context.
+<p align="center">
+  <img src="./imgs/front.png" alt="Speak like you eat" width="720">
+</p>
 
-The authoritative behavior is in the [SLYE MVP specification](backlog/docs/specs/doc-1%20-%20SLYE-MVP-specification.md). The complete benchmark evidence is in the [SLYE benchmark results](backlog/docs/specs/doc-4%20-%20SLYE-benchmark-results.md). For hands-on checks, use the [sandbox runbook](backlog/docs/runbooks/doc-2%20-%20SLYE-sandbox-manual-checks.md).
+<h6 align="center"><i>Translate AI garbage to human language</i></h6>
 
-## Install from a local clone
+SLYE is a Pi package that adds a plain-language rewrite after a completed response. In Italian, “speak like you eat” (*parla come mangi*) means being straightforward instead of using big, clever, empty words. SLYE applies that idea to AI output.
 
-SLYE is not published to npm, and this repository does not assume a Git remote. After obtaining a local clone, install its path with Pi:
+*Deliberately inspired by [Claudish to English](https://github.com/gvzdv/claudish-to-english)*
+
+## Install
 
 ```sh
 # Available to all projects
-pi install /absolute/path/to/speak_like_you_eat
+pi install npm:speak-like-you-eat
 
-# Available only in the current trusted project
-pi install --local /absolute/path/to/speak_like_you_eat
+# Available only in the current project
+pi install -l npm:speak-like-you-eat
 ```
 
-Run the project-local command only in a trusted project; after reviewing and trusting the package, you may add `--approve` when Pi requires approval. Pi extensions execute with your user permissions.
+## Use
 
-## Configure and use
+1. Run `/slye model` to select and save an authenticated model. SLYE enables it and saves it globally or, in a trusted project, locally.
+2. Chat normally. After an eligible answer, read the `🤌 Speak like you eat:` card below the unchanged original.
+3. Use `/slye off` later to disable SLYE and `/slye on` to restore it.
 
-Run `/slye model` to search authenticated eligible Pi models and save one globally or, for a trusted project, locally. The picker shows SLYE's enforced thinking level, starts with eligible scoped models when available, and uses Tab to switch to all authenticated eligible models; Esc or Ctrl-C cancels without writing. `/slye on` restores a usable saved model or opens the picker; `/slye off` saves an explicitly disabled configuration.
+| Command | What it does |
+| --- | --- |
+| `/slye model` | Choose a model; Tab switches between scoped and all authenticated eligible models. |
+| `/slye on` | Enable SLYE or open the picker when no usable model is saved. |
+| `/slye off` | Disable SLYE. |
 
-SLYE always derives the selected model's lowest currently supported thinking level and never exposes or saves a thinking setting. Models with no valid level cannot be selected; a saved model that loses valid metadata fails open. Cost and latency follow the model choice.
+SLYE automatically uses the selected model's lowest supported thinking level. Only normally completed final responses with at least 200 prose characters outside fenced code are eligible.
 
-The global configuration is `${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/slye.json`. In a trusted project, `.pi/slye.json` completely overrides it; an invalid trusted project file blocks global fallback. The schema saves only `enabled` and model provider/id.
+## What SLYE guarantees
 
-SLYE rewrites only normally completed final assistant responses with at least 200 non-whitespace prose characters after fenced code is excluded. It skips intermediate, aborted, errored, truncated, tool-call, thinking, and tool-result content.
+- The original response stays visible and unchanged. The display-only card never enters LLM context.
+- Each eligible response makes one additional provider request, with its own cost and latency.
+- Escape cancels a rewrite. After 45 seconds or another failure, SLYE leaves the original alone and fails open.
+- SLYE sends an isolated, SLYE-controlled payload directly to the selected provider. It does not load project instructions, skills, prompts, tools, files, or the full session history. Other extensions and provider-side processing are outside SLYE's control.
 
-Each eligible response makes one isolated secondary request directly to the effective provider. SLYE supplies only its rewrite system prompt and one user message with bounded selected chat context and the target; it does not load project instructions, skills, prompts, tools, files, or full session history, and does not change Pi's active model or thinking. This boundary covers only data and behavior SLYE supplies: other installed extensions and provider-side processing are outside its control. Model quality can vary, and already-clear prose may be returned unchanged. The [benchmark results](backlog/docs/specs/doc-4%20-%20SLYE-benchmark-results.md) contain the full aggregate tables; on the fixed public benchmark, `openai-codex/gpt-5.6-terra` produced the strongest rewrites while `ollama-cloud/deepseek-v4-flash:0731` was about three times faster. These are small-corpus measurements, not universal provider guarantees.
+## Evidence
 
-While the secondary request runs, Pi shows `Rewriting AI-speak…`. Escape cancels it silently. SLYE stops waiting after a local 45-second deadline, leaves the original response alone, and shows at most one fail-open warning per session for timeout or other failures. A non-cooperative provider may continue and consume usage after local cancellation or timeout.
+Read the [MVP specification](backlog/docs/specs/doc-1%20-%20SLYE-MVP-specification.md) for the complete behavior and the [benchmark results](backlog/docs/specs/doc-4%20-%20SLYE-benchmark-results.md) for methodology, costs, and limitations.
 
-## Development and sandbox
+## Development
 
-Requires Node 24+ and Pi. In a Git clone, `npm ci` installs the development dependencies and Lefthook's pre-commit hook.
+Requires Node 24+ and Pi.
 
 ```sh
 npm ci
-npm run format       # write Biome formatting
-npm run lint         # run Biome linting
-npm run biome:check  # run Biome checks without writing
-npm run typecheck    # run TypeScript checks
-npm test             # run Node tests
-npm run check        # run Biome checks, TypeScript checks, and tests
-npm pack --dry-run --json  # inspect the package
+npm run check
+npm pack --dry-run --json
+pi -e .
 ```
 
-Pre-commit runs Biome on staged supported files, re-stages its fixes, then runs the full typecheck and Node test suite. The hook stops at the first failure. If install scripts were disabled, recover it with `npx lefthook install`. In an emergency, bypass the hook with `git commit --no-verify`.
-
-Hooks complement, rather than replace, manual checks and any checks run elsewhere; use `npm run check` before sharing changes.
-
-The durable sibling sandbox is `../speak_like_you_eat_sandbox`. Its package listing and manual TUI checks are documented in the sandbox runbook; the no-request listing command is:
-
-```sh
-cd ../speak_like_you_eat_sandbox
-pi list --approve
-```
+`pi -e .` loads the clone for local testing. Do not submit a prompt when you only need to check that the extension loads.

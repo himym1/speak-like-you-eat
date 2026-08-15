@@ -2,21 +2,38 @@
   "name": "speak-like-you-eat",
   "version": "0.1.0",
   "description": "A Pi extension for plain-language companion rewrites.",
+  "author": "wtfzambo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wtfzambo/speak-like-you-eat.git"
+  },
+  "homepage": "https://github.com/wtfzambo/speak-like-you-eat#readme",
+  "bugs": "https://github.com/wtfzambo/speak-like-you-eat/issues",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "keywords": [
-    "pi-package"
+    "pi",
+    "pi-package",
+    "pi-extension",
+    "plain-language",
+    "writing",
+    "rewrite"
   ],
   "files": [
     "src",
+    "imgs/front.png",
     "README.md",
     "backlog/docs/specs/doc-1 - SLYE-MVP-specification.md",
-    "backlog/docs/specs/doc-4 - SLYE-benchmark-results.md",
-    "backlog/docs/runbooks/doc-2 - SLYE-sandbox-manual-checks.md"
+    "backlog/docs/specs/doc-4 - SLYE-benchmark-results.md"
   ],
   "pi": {
     "extensions": [
       "./src/index.ts"
-    ]
+    ],
+    "image": "https://raw.githubusercontent.com/wtfzambo/speak-like-you-eat/refs/heads/main/imgs/front.png"
   },
   "scripts": {
     "format": "biome format --write .",

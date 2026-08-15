@@ -7,22 +7,22 @@ import { promisify } from "node:util";
 const README_LINKED_DOCUMENTS = [
   "backlog/docs/specs/doc-1 - SLYE-MVP-specification.md",
   "backlog/docs/specs/doc-4 - SLYE-benchmark-results.md",
-  "backlog/docs/runbooks/doc-2 - SLYE-sandbox-manual-checks.md",
 ];
 
 const PACKAGE_FILES = [
   "src",
+  "imgs/front.png",
   "README.md",
   "backlog/docs/specs/doc-1 - SLYE-MVP-specification.md",
   "backlog/docs/specs/doc-4 - SLYE-benchmark-results.md",
-  "backlog/docs/runbooks/doc-2 - SLYE-sandbox-manual-checks.md",
 ];
 
 const PACKED_FILES = [
+  "LICENSE",
   "README.md",
-  "backlog/docs/runbooks/doc-2 - SLYE-sandbox-manual-checks.md",
   "backlog/docs/specs/doc-1 - SLYE-MVP-specification.md",
   "backlog/docs/specs/doc-4 - SLYE-benchmark-results.md",
+  "imgs/front.png",
   "package.json",
   "src/config.ts",
   "src/index.ts",
@@ -32,18 +32,53 @@ const PACKED_FILES = [
   "src/rewrite.ts",
 ];
 
+type PackageManifest = {
+  name: string;
+  version: string;
+  author: string;
+  license: string;
+  repository: { url: string };
+  homepage: string;
+  bugs: string;
+  publishConfig: { access: string };
+  files: string[];
+  pi: { extensions: string[]; image: string };
+};
+
 const runCommand = promisify(execFile);
 
-test("the package manifest declares its extension and README-linked governed documents and enforces the exact packed-file allowlist", async () => {
+test("the package manifest declares public release metadata, its extension, README-linked governed documents, and the 12-file public allowlist", async () => {
   const packageUrl = new URL("../package.json", import.meta.url);
-  const packageJson = JSON.parse(await readFile(packageUrl, "utf8")) as {
-    files: string[];
-    pi: { extensions: string[] };
-  };
+  const packageJson = JSON.parse(await readFile(packageUrl, "utf8")) as PackageManifest;
   const extensionPath = "./src/index.ts";
 
+  assert.deepEqual(
+    {
+      name: packageJson.name,
+      version: packageJson.version,
+      author: packageJson.author,
+      license: packageJson.license,
+      repository: packageJson.repository.url,
+      homepage: packageJson.homepage,
+      bugs: packageJson.bugs,
+      publishConfig: packageJson.publishConfig,
+    },
+    {
+      name: "speak-like-you-eat",
+      version: "0.1.0",
+      author: "wtfzambo",
+      license: "MIT",
+      repository: "git+https://github.com/wtfzambo/speak-like-you-eat.git",
+      homepage: "https://github.com/wtfzambo/speak-like-you-eat#readme",
+      bugs: "https://github.com/wtfzambo/speak-like-you-eat/issues",
+      publishConfig: { access: "public" },
+    },
+  );
   assert.deepEqual(packageJson.files, PACKAGE_FILES);
-  assert.deepEqual(packageJson.pi.extensions, [extensionPath]);
+  assert.deepEqual(packageJson.pi, {
+    extensions: [extensionPath],
+    image: "https://raw.githubusercontent.com/wtfzambo/speak-like-you-eat/refs/heads/main/imgs/front.png",
+  });
 
   await access(new URL(extensionPath, packageUrl));
   await access(new URL("../README.md", import.meta.url));
@@ -54,7 +89,7 @@ test("the package manifest declares its extension and README-linked governed doc
   const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
   assert.ok(readme.includes("backlog/docs/specs/doc-1%20-%20SLYE-MVP-specification.md"));
   assert.ok(readme.includes("backlog/docs/specs/doc-4%20-%20SLYE-benchmark-results.md"));
-  assert.ok(readme.includes("backlog/docs/runbooks/doc-2%20-%20SLYE-sandbox-manual-checks.md"));
+  assert.ok(!readme.includes("backlog/docs/runbooks/doc-2%20-%20SLYE-sandbox-manual-checks.md"));
 
   const packed = JSON.parse(
     (await runCommand("npm", ["pack", "--dry-run", "--json"], { cwd: new URL("../", import.meta.url) })).stdout,

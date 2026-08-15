@@ -3,7 +3,7 @@ id: doc-2
 title: SLYE sandbox manual checks
 type: guide
 created_date: '2026-08-13 23:14'
-updated_date: '2026-08-14 20:26'
+updated_date: '2026-08-15 15:27'
 ---
 # SLYE sandbox manual checks
 
@@ -17,7 +17,7 @@ From this repository, enter the sandbox and configure the local package with Pi'
 
 ```sh
 cd ../speak_like_you_eat_sandbox
-pi install --local ../speak_like_you_eat
+pi install -l ../speak_like_you_eat
 ```
 
 This writes the sandbox's `.pi/settings.json`. Use `--approve` only for the current verification command when Pi needs to trust the sandbox.
@@ -128,16 +128,21 @@ npm run check
 npm pack --dry-run --json
 ```
 
-The dry run must include `README.md`, `package.json`, the shipped `src/` files including `model-completion.ts` and `model-picker.ts`, and the packaged specification, benchmark-results, and sandbox-runbook documents (`doc-1`, `doc-4`, and `doc-2`). It must exclude `test/`, `backlog/tasks/`, `backlog/decisions/`, `AGENTS.md`, `.pi/`, `.pandino/`, and sandbox data.
+The dry run must contain exactly 12 files: `LICENSE`, `README.md`, `package.json`, `imgs/front.png`, the packaged specification and benchmark-results documents (`doc-1` and `doc-4`), and the six shipped `src/` TypeScript files. It must exclude `test/`, `backlog/tasks/`, `backlog/decisions/`, the sandbox runbook (`doc-2`), `AGENTS.md`, `.pi/`, `.pandino/`, and sandbox data.
 
-Confirm the sandbox still lists its local source package:
+After publication, check the public package from a fresh temporary project without submitting a prompt or making a model request:
 
 ```sh
-cd ../speak_like_you_eat_sandbox
-pi list --approve
+(
+  set -e
+  project_dir="$(mktemp -d)"
+  trap 'rm -rf "$project_dir"' EXIT
+  (cd "$project_dir" && pi install -l npm:speak-like-you-eat)
+  (cd "$project_dir" && pi list --approve)
+)
 ```
 
-For an isolated tarball smoke, create temporary package, agent, and project directories. Install the tarball beneath the temporary Pi agent npm root, write the exact package source to temporary agent settings, list it from the empty temporary project, then remove all temporary directories on success or failure:
+For an isolated tarball smoke before publication, create temporary package, agent, and project directories. Install the tarball beneath the temporary Pi agent npm root, write the exact package source to temporary agent settings, list it from the empty temporary project, then remove all temporary directories on success or failure:
 
 ```sh
 (
@@ -169,4 +174,4 @@ The list must find `npm:speak-like-you-eat@0.1.0` and no temporary files may rem
 
 After each later slice, start Pi from the sandbox with `pi --approve --offline` when the check does not require a configured model, or normally when it does. Exercise only the behavior added in that slice, compare the result with the specification, and stop before beginning the next slice if the manual check fails.
 
-Keep the sandbox package source pointed at this local repository. Do not use `pi install` without `--local`, and do not place credentials in the sandbox.
+Keep the sandbox package source pointed at this local repository. Use `pi install -l` for the project-local package, and do not place credentials in the sandbox.
