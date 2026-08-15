@@ -64,7 +64,7 @@ jobs:
             throw new Error("GitHub Release must not be a draft or prerelease.");
           }
           NODE
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: refs/tags/${{ steps.tag.outputs.tag }}
           fetch-depth: 0
@@ -85,10 +85,11 @@ jobs:
             echo "$TAG is not an ancestor of origin/main."
             exit 1
           fi
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
+          package-manager-cache: false
       - name: Install the trusted publishing npm CLI
         run: |
           npm install --global npm@11.19.0

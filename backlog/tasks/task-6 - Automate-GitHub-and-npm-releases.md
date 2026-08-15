@@ -5,12 +5,13 @@ status: In Progress
 assignee:
   - '@zambo'
 created_date: '2026-08-15 17:25'
-updated_date: '2026-08-15 17:54'
+updated_date: '2026-08-15 21:27'
 labels: []
 dependencies: []
 references:
   - 'https://github.com/wtfzambo/spotme/tree/main/.github/workflows'
   - 'https://github.com/googleapis/release-please-action'
+  - 'https://github.com/wtfzambo/speak-like-you-eat/actions/runs/31909381756'
 modified_files:
   - test/package-contract.test.ts
   - release-please-config.json
@@ -58,4 +59,6 @@ The user chose the simplest stable-only policy on 2026-08-15: no npm prereleases
 Implemented stable Release Please, PR/release/publish workflows, package-version contract coverage, and the governed release runbook. Validated JSON/YAML, npm ci/check, both no-call dry-run fingerprints, manifest cleanliness, and the 12-file package artifact without publishing.
 
 Correction pass: publish.yml now pins and verifies npm 11.19.0, fetches main directly into refs/remotes/origin/main, requires a matching existing non-draft, non-prerelease GitHub Release through gh with read-only contents access, and stores npm version-check files under RUNNER_TEMP. The runbook records the one-time GitHub Actions PR-creation setting while retaining read-only default workflow permissions and workflow-level least permissions.
+
+Hosted GitHub run 31909381756 passed all checks but warned about Node 20 action runtimes. Corrected the workflows to actions/checkout@v6 and actions/setup-node@v6; publish.yml explicitly disables setup-node package-manager caching for the release build, and release.yml now uses googleapis/release-please-action@v5. YAML validation and npm run check pass.
 <!-- SECTION:NOTES:END -->
