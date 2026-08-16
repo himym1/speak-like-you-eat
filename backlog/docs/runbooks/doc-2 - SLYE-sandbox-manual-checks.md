@@ -3,7 +3,7 @@ id: doc-2
 title: SLYE sandbox manual checks
 type: guide
 created_date: '2026-08-13 23:14'
-updated_date: '2026-08-15 15:27'
+updated_date: '2026-08-16 01:27'
 ---
 # SLYE sandbox manual checks
 
@@ -163,12 +163,12 @@ For an isolated tarball smoke before publication, create temporary package, agen
   printf '{\n  "name": "temporary-pi-agent-npm"\n}\n' > "$agent_dir/npm/package.json"
   tarball="$(npm pack --silent --pack-destination "$package_dir")"
   npm install --prefix "$agent_dir/npm" --legacy-peer-deps --ignore-scripts --no-audit --no-fund "$package_dir/$tarball"
-  printf '{\n  "packages": ["npm:speak-like-you-eat@0.1.0"]\n}\n' > "$agent_dir/settings.json"
+  printf '{\n  "packages": ["npm:speak-like-you-eat@1.0.0"]\n}\n' > "$agent_dir/settings.json"
   (cd "$project_dir" && PI_CODING_AGENT_DIR="$agent_dir" pi list --approve)
 )
 ```
 
-The list must find `npm:speak-like-you-eat@0.1.0` and no temporary files may remain.
+The list must find `npm:speak-like-you-eat@1.0.0` and no temporary files may remain.
 
 ### Later slices
 
