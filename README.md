@@ -6,7 +6,9 @@
 
 <h6 align="center"><i>Translate AI garbage to human language</i></h6>
 
-SLYE is a Pi package that adds a plain-language rewrite after a completed response. In Italian, “speak like you eat” (*parla come mangi*) means being straightforward instead of using big, clever, empty words. SLYE applies that idea to AI output.
+SLYE is a Pi package that adds a plain-language rewrite after a completed response.
+
+In Italian, “speak like you eat” (*parla come mangi*) means being straightforward instead of using big, clever, empty words. SLYE applies that idea to AI output.
 
 *Deliberately inspired by [Claudish to English](https://github.com/gvzdv/claudish-to-english)*
 
