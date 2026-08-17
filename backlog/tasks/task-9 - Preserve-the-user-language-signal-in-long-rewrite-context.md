@@ -1,18 +1,21 @@
 ---
 id: TASK-9
 title: Preserve the target response language during rewriting
-status: In Progress
+status: Done
 assignee:
   - '@zambo'
 created_date: '2026-08-17 00:14'
-updated_date: '2026-08-17 00:34'
+updated_date: '2026-08-17 00:48'
 labels: []
 dependencies: []
 references:
-  - src/rewrite.ts
-  - src/model-rewrite.ts
-  - test/rewrite.test.ts
-  - test/model-rewrite.test.ts
+  - 'https://github.com/wtfzambo/speak-like-you-eat/pull/2'
+  - 'https://github.com/wtfzambo/speak-like-you-eat/releases/tag/v1.0.1'
+  - 'https://github.com/wtfzambo/speak-like-you-eat/actions/runs/31982999501'
+documentation:
+  - doc-1
+  - doc-2
+  - doc-4
 modified_files:
   - src/model-rewrite.ts
   - test/model-rewrite.test.ts
@@ -22,6 +25,10 @@ modified_files:
   - backlog/docs/specs/doc-1 - SLYE-MVP-specification.md
   - backlog/docs/runbooks/doc-2 - SLYE-sandbox-manual-checks.md
   - backlog/docs/specs/doc-4 - SLYE-benchmark-results.md
+  - .release-please-manifest.json
+  - CHANGELOG.md
+  - package.json
+  - package-lock.json
 type: bug
 ordinal: 10000
 ---
@@ -34,11 +41,11 @@ Prevent SLYE from translating a response while simplifying it. The rewrite must 
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The production prompt explicitly requires preserving the target response's original language or intentional language mix and forbids translating it.
-- [ ] #2 Prior user and assistant context is described and used only for topic understanding, never as the output-language authority.
-- [ ] #3 The fix preserves one-message direct-completion isolation, the 8,000-character context ceiling, automatic minimum thinking, cancellation, timeout, and fail-open behavior; it adds no language detector, retry, or extra model call.
-- [ ] #4 Automated tests cover an Italian target with English prompt/context pressure and a deliberately mixed-language target at the exact completion payload boundary.
-- [ ] #5 Historical phase-one/phase-two benchmark prompts and fingerprints remain immutable evidence; the production prompt divergence and unbenchmarked language-preservation fix are documented without claiming new benchmark results.
+- [x] #1 The production prompt explicitly requires preserving the target response's original language or intentional language mix and forbids translating it.
+- [x] #2 Prior user and assistant context is described and used only for topic understanding, never as the output-language authority.
+- [x] #3 The fix preserves one-message direct-completion isolation, the 8,000-character context ceiling, automatic minimum thinking, cancellation, timeout, and fail-open behavior; it adds no language detector, retry, or extra model call.
+- [x] #4 Automated tests cover an Italian target with English prompt/context pressure and a deliberately mixed-language target at the exact completion payload boundary.
+- [x] #5 Historical phase-one/phase-two benchmark prompts and fingerprints remain immutable evidence; the production prompt divergence and unbenchmarked language-preservation fix are documented without claiming new benchmark results.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -67,4 +74,14 @@ Implementation approved as a prompt-only patch. The user explicitly rejected a l
 Implemented the prompt-only target-language policy, exact Italian and mixed-language payload-contract regressions, and historical phase-two prompt divergence assertions. Updated doc-1, doc-2, doc-4, README, and the stale display integration expectation; no provider/model call or benchmark execution ran.
 
 Validation passed: npm run check (75 tests); both no-call benchmark dry-runs (phase-one fingerprint 80d7d401fe9862d3d558efc4ba8b674014dd3e7e975f02d77cc3b37c30fbd759; phase-two fingerprint 59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728); unchanged manifest diff; and npm pack --dry-run --json with 12 files.
+
+Completed and released on 2026-08-17. Commit 6f38a5a changed only the production language/context prompt lines plus exact payload tests and current documentation; no detector, retry, extra request, language block, or context-selection change was added. `npm run check` passed 75 tests. Both no-call dry-runs retained phase-one fingerprint `80d7d401fe9862d3d558efc4ba8b674014dd3e7e975f02d77cc3b37c30fbd759` and phase-two fingerprint `59fc67e920727f25b40b1fd874cda6b51aff9f98426ae09af27275a4fda96728`; frozen prompt builders and manifest JSON remained unchanged. Taste, spec, and docs reviews found no must-fix issues. The primary final-reviewer was unavailable with Anthropic 429, so the orchestrator performed the integrated final check against the same mandate and found no blocker; the generated release diff then received two green hosted exact-branch runs.
+
+Release Please PR https://github.com/wtfzambo/speak-like-you-eat/pull/2 changed only manifest/package/lock versions and changelog to 1.0.1. Hosted runs https://github.com/wtfzambo/speak-like-you-eat/actions/runs/31982901248 and https://github.com/wtfzambo/speak-like-you-eat/actions/runs/31982880360 passed all no-call gates. Merge commit 4f067fe16324a89e4571bbcd7a70f63089e039f9 created stable https://github.com/wtfzambo/speak-like-you-eat/releases/tag/v1.0.1. Release run 31982989381 dispatched OIDC publish run https://github.com/wtfzambo/speak-like-you-eat/actions/runs/31982999501 successfully. npm latest is 1.0.1 with shasum `e3dc48163f4c41af3788b145f1d2497ddae5aaec`, integrity `sha512-HDHywr9FnGbakab98vqvUn9G6e73lNUzRm7Psf0682RZcwOuaYA6XKgHoVYMlD1Ut+tX031m5CVbmp2KsSP97A==`, SLSA provenance, exactly 12 files, source-matching README and model-rewrite.ts, and a clean Pi installation. No provider/model call or benchmark execution ran, so language compliance remains prompt-enforced rather than newly benchmarked.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Fixed SLYE's language policy so the production rewrite request preserves the Target response's original or intentionally mixed languages and uses prior context only for topic understanding. Kept all historical benchmark prompts and fingerprints immutable, added exact Italian/mixed-language payload regressions, updated current docs honestly, and released 1.0.1 through the reviewed Release Please/OIDC path with provenance, exact 12-file artifact, and clean Pi installation. No detector, retry, extra request, model call, or new benchmark evidence was introduced.
+<!-- SECTION:FINAL_SUMMARY:END -->
