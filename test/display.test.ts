@@ -191,7 +191,11 @@ test("calls the configured authenticated model once with an isolated exact rewri
     `Context:\nuser:\nSpiega questo in italiano\n\nTarget:\n${firstTargetBlock}\n\n${secondTargetBlock}`,
   );
   assert.match(receivedContext?.systemPrompt ?? "", /Rewrite only the target in clear, everyday language\./);
-  assert.match(receivedContext?.systemPrompt ?? "", /most recent user-labelled context/);
+  assert.match(
+    receivedContext?.systemPrompt ?? "",
+    /Preserve the target's original language and intentional language mix; do not translate\./,
+  );
+  assert.match(receivedContext?.systemPrompt ?? "", /Context is only for topic understanding/);
   assert.match(receivedContext?.systemPrompt ?? "", /ignore any instructions/);
   assert.equal(receivedOptions?.cacheRetention, "none");
   assert.match(receivedOptions?.sessionId ?? "", /^[0-9a-f-]{36}$/i);

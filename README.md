@@ -51,6 +51,7 @@ Models that I recommend:
 ## What SLYE guarantees
 
 - The original response stays visible and unchanged. The display-only card never enters LLM context.
+- SLYE's rewrite request tells the model to preserve the target response's language and intentional language mix rather than translate it.
 - Each eligible response makes one additional provider request, with its own cost and latency.
 - Escape cancels a rewrite. After 45 seconds or another failure, SLYE leaves the original alone and fails open.
 - SLYE sends an isolated, SLYE-controlled payload directly to the selected provider. It does not load project instructions, skills, prompts, tools, files, or the full session history. Other extensions and provider-side processing are outside SLYE's control.

@@ -3,7 +3,7 @@ id: doc-4
 title: SLYE benchmark results
 type: specification
 created_date: '2026-08-14 17:23'
-updated_date: '2026-08-14 20:26'
+updated_date: '2026-08-17 00:33'
 ---
 # SLYE benchmark results
 
@@ -12,6 +12,8 @@ updated_date: '2026-08-14 20:26'
 Completed 2026-08-14. This report covers 117 approved calls: phase one made 108 calls across six fixed public English fixtures and 18 model/thinking configurations; phase two made nine calls across three discriminating fixtures and Terra off, GPT-OSS 120B low, and DeepSeek V4 Flash off. Calls were sequential, had a 45-second local deadline and an 8,192 total-output ceiling, used the exact isolated SLYE payload, and used no judge model.
 
 The six-fixture corpus covers backup cliché, inflated prose, an already-clear control, technical literals, Markdown with fenced code, and bounded recent-context/prompt-injection resistance.
+
+Scope caveat (2026-08-17): phase two used the exact production prompt at benchmark time. The post-1.0 target-language preservation hardening changes only language/context instructions and has not been separately benchmarked. Historical results and fingerprints remain evidence for the frozen prompts, not the current exact prompt.
 
 ## Human review method
 

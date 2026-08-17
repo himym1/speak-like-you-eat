@@ -3,7 +3,7 @@ id: doc-2
 title: SLYE sandbox manual checks
 type: guide
 created_date: '2026-08-13 23:14'
-updated_date: '2026-08-16 01:27'
+updated_date: '2026-08-17 00:33'
 ---
 # SLYE sandbox manual checks
 
@@ -114,7 +114,7 @@ pi --approve
 ```
 
 1. Submit one prompt expected to produce a normally completed final answer with more than 200 prose characters. This makes one primary request and one secondary rewrite request.
-2. Verify the unchanged original appears first, then the exact working text `Rewriting AI-speak…`, then one plain-language `🤌 Speak like you eat:` card. Verify the card is in the latest user's language and preserves technical literals, Markdown, and fenced code.
+2. Verify the unchanged original appears first, then the exact working text `Rewriting AI-speak…`, then one plain-language `🤌 Speak like you eat:` card. Verify the card preserves the original target response's language, not the latest user's language, and preserves technical literals, Markdown, and fenced code.
 3. Submit another eligible answer and press Escape while its secondary rewrite is running. A started secondary request may consume provider usage. Verify there is no card and no warning for that answer.
 4. Exit, then resume or reopen the first session. Verify the saved card still renders and that resume alone appends no duplicate card.
 
