@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/wtfzambo/speak-like-you-eat/compare/v1.0.0...v1.0.1) (2026-08-17)
+
+
+### Bug Fixes
+
+* preserve target response language ([6f38a5a](https://github.com/wtfzambo/speak-like-you-eat/commit/6f38a5a1a531b3dd2f36a6c3aa15cbabbe15e37e))
+
 ## [1.0.0](https://github.com/wtfzambo/speak-like-you-eat/compare/v0.1.1...v1.0.0) (2026-08-16)
 
 
