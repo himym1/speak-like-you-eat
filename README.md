@@ -22,6 +22,8 @@ pi install git:github.com/himym1/speak-like-you-eat
 pi install -l git:github.com/himym1/speak-like-you-eat
 ```
 
+This fork is installed from Git and is not published to npm. Package release metadata remains compatible with the upstream Release Please workflow.
+
 ## Use
 
 1. Run `/slye model` to select and save an authenticated model. SLYE enables it and saves it globally or, in a trusted project, locally.

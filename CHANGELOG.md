@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.1.0](https://github.com/himym1/speak-like-you-eat/compare/v1.0.1...main) (2026-08-18)
+## Unreleased
 
 ### Features
 

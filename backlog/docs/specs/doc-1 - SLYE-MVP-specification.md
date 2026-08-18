@@ -3,13 +3,13 @@ id: doc-1
 title: SLYE MVP specification
 type: specification
 created_date: '2026-08-13 23:14'
-updated_date: '2026-08-18 07:35'
+updated_date: '2026-08-18 08:01'
 ---
 # SLYE MVP specification
 
 ## Status
 
-The MVP implementation and sandbox gates are complete. The public two-phase benchmark, evidence-based prompt promotion, automatic minimum-thinking policy, scoped/all model picker, integrated package verification, and opt-in original-response hiding are also complete. MVP acceptance and branch-level review evidence are tracked in TASK-1 and TASK-10.
+The MVP implementation and sandbox gates are complete. The public two-phase benchmark, evidence-based prompt promotion, automatic minimum-thinking policy, scoped/all model picker, and integrated package verification are also complete. Opt-in original-response hiding is implemented in this fork and specified below; delivery acceptance is tracked in TASK-10.
 
 ## Scope
 

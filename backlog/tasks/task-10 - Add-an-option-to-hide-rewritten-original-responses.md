@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@himym1'
 created_date: '2026-08-18 07:02'
-updated_date: '2026-08-18 07:52'
+updated_date: '2026-08-18 08:01'
 labels: []
 dependencies: []
 references:
@@ -41,8 +41,8 @@ Users who prefer the SLYE rewrite should be able to hide the duplicated original
 1. Add backward-compatible `hideOriginal` configuration and `/slye original hide|show|status` commands while preserving the preference across model/on/off writes.
 2. Keep the proven `agent_end` rewrite lifecycle. Persist SHA-256 fingerprints with every successful rewrite entry, then hide matching finalized Assistant Markdown only after the card append succeeds.
 3. Register a display-only Markdown transformer that returns empty Markdown for matching assistant text when hiding is enabled; leave streaming, session data, and model context untouched.
-4. Restore fingerprints from active-branch rewrite entries on session start and refresh Assistant components after resume or command toggles through the public UI surface. Cancellation, timeout, provider failure, and append failure never mark an original hidden.
-5. Add config, fingerprint, lifecycle, resume, command, and regression tests; update the authoritative spec, an accepted decision, README, and local fork version.
+4. Restore fingerprints from active-branch rewrite entries on session start and refresh Assistant components after resume or command toggles through a transient empty widget that does not take editor focus. Cancellation, timeout, provider failure, and append failure never mark an original hidden.
+5. Add config, fingerprint, lifecycle, resume, command, and regression tests; update the authoritative spec, an accepted decision, README, and Unreleased changelog.
 6. Run project checks and isolated TUI smoke, then complete taste/spec/docs/final reviews before committing, pushing, and installing the local fork.
 <!-- SECTION:PLAN:END -->
 
@@ -56,4 +56,8 @@ Implemented the pure fingerprint/transform module, the original-display runtime 
 Taste/spec review found that `setHiddenThinkingLabel()` changed unrelated UI state, decision-3 was empty, hide command persistence lacked direct coverage, and docs incorrectly said byte-identical. Replaced refresh with a transient empty `setWidget` factory that invalidates without taking focus or changing settings; filled decision-3 through Backlog Browser; added hide persistence assertions; documented trimmed rendered-text identity. Real TUI smoke verified hidden-only card output, immediate show restoring the original, immediate hide removing it again, and preserved editor focus.
 
 Second taste/spec review found no must-fix, minor, unrequested, or wrong behavior. Reviewers confirmed all prior findings closed, package dry-run contains the expected 14 files, git diff check passes, and all six acceptance criteria trace to code/tests/docs.
+
+Docs review rejected a fabricated stable 1.1.0 and fork-owned npm metadata because this fork is not being released. Restored package/release metadata to upstream-compatible 1.0.1, moved the feature to Unreleased, and documented Git-only fork installation.
+
+Follow-up taste review found one minor wording issue: authoritative spec said the feature was only specified despite implemented code. Updated it to say implemented in this fork while delivery acceptance remains tracked in TASK-10. Spec review found no issues.
 <!-- SECTION:NOTES:END -->

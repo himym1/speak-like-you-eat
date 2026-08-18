@@ -81,16 +81,16 @@ test("the package manifest declares public release metadata, its extension, gove
       name: "speak-like-you-eat",
       author: "wtfzambo",
       license: "MIT",
-      repository: "git+https://github.com/himym1/speak-like-you-eat.git",
-      homepage: "https://github.com/himym1/speak-like-you-eat#readme",
-      bugs: "https://github.com/himym1/speak-like-you-eat/issues",
+      repository: "git+https://github.com/wtfzambo/speak-like-you-eat.git",
+      homepage: "https://github.com/wtfzambo/speak-like-you-eat#readme",
+      bugs: "https://github.com/wtfzambo/speak-like-you-eat/issues",
       publishConfig: { access: "public" },
     },
   );
   assert.deepEqual(packageJson.files, PACKAGE_FILES);
   assert.deepEqual(packageJson.pi, {
     extensions: [extensionPath],
-    image: "https://raw.githubusercontent.com/himym1/speak-like-you-eat/refs/heads/main/imgs/front.png",
+    image: "https://raw.githubusercontent.com/wtfzambo/speak-like-you-eat/refs/heads/main/imgs/front.png",
   });
 
   await access(new URL(extensionPath, packageUrl));
