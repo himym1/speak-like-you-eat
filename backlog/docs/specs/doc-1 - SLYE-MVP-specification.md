@@ -3,13 +3,13 @@ id: doc-1
 title: SLYE MVP specification
 type: specification
 created_date: '2026-08-13 23:14'
-updated_date: '2026-08-17 00:32'
+updated_date: '2026-08-18 07:35'
 ---
 # SLYE MVP specification
 
 ## Status
 
-The MVP implementation and sandbox gates are complete. The public two-phase benchmark, evidence-based prompt promotion, automatic minimum-thinking policy, scoped/all model picker, and integrated package verification are also complete. MVP acceptance and branch-level review evidence are tracked in TASK-1.
+The MVP implementation and sandbox gates are complete. The public two-phase benchmark, evidence-based prompt promotion, automatic minimum-thinking policy, scoped/all model picker, integrated package verification, and opt-in original-response hiding are also complete. MVP acceptance and branch-level review evidence are tracked in TASK-1 and TASK-10.
 
 ## Scope
 
@@ -17,22 +17,26 @@ SLYE operates only in Pi's interactive TUI. Outside the TUI it is a no-op.
 
 ## Configuration and onboarding
 
-- Configuration is stored in `slye.json`, validated before use, and contains only `enabled` plus the selected model's `provider` and `id`; it never contains a thinking setting.
+- Configuration is stored in `slye.json`, validated before use, and contains `enabled`, optional `hideOriginal`, and the selected model's `provider` and `id`; it never contains a thinking setting. Missing `hideOriginal` means `false` for backward compatibility.
 - A complete project-local configuration overrides the complete global configuration only when the project is trusted. An invalid trusted project configuration blocks global fallback.
 - Configuration writes are atomic.
 - If no model is configured, Pi shows a yellow non-modal startup warning directing the user to `/slye model`; SLYE otherwise does no work.
 - `/slye model` opens a custom searchable picker showing each authenticated eligible provider/model and its automatically enforced thinking level. It opens on eligible authenticated scoped models when any exist; otherwise it opens on all authenticated eligible models.
 - When scoped candidates exist, Tab switches non-persistently between scoped and all authenticated eligible models and preserves the search. Each picker invocation resets to its default scope. Esc or Ctrl-C cancels without writing. After selection, the existing global or trusted-project save scope remains available.
 - SLYE derives the first currently supported model level in this exact order: `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`. It ignores a scoped model entry's pinned thinking level. A model whose metadata exposes no supported level cannot be selected; if a saved model loses valid level metadata, SLYE fails open. A reasoning-only model therefore runs at its minimum (for example, `high`), with cost and latency determined by that model choice.
-- `/slye on` and `/slye off` persist the enabled state. Enabling with no usable model opens model selection. A save confirmation displays provider, model, and the recomputed enforced thinking level. Neither command overwrites an invalid effective configuration file.
+- `/slye on` and `/slye off` persist the enabled state without changing `hideOriginal`. Enabling with no usable model opens model selection. A save confirmation displays provider, model, and the recomputed enforced thinking level. Neither command overwrites an invalid effective configuration file.
+- `/slye original hide`, `/slye original show`, and `/slye original status` persist, restore, and report original-response display behavior at the effective configuration scope. Invalid effective configuration is never overwritten.
 
 ## Eligible responses and display
 
 - Consider only the final, normally completed assistant response.
 - It must have at least 200 non-whitespace prose characters after fenced code is excluded from the gate.
 - Do not rewrite intermediate, aborted, errored, length-truncated, tool-call, thinking, or tool-result content.
-- Keep the original assistant response visible and unchanged.
+- Keep the original assistant response unchanged in the Session and LLM context. It remains visible when `hideOriginal` is missing or false.
 - Append an immutable, persistent, display-only custom entry labelled `🤌 Speak like you eat:`. It must render after session resume and never enter LLM context.
+- Every new rewrite entry stores SHA-256 fingerprints of the target's non-empty text blocks. After the entry append succeeds, `hideOriginal: true` hides matching finalized Assistant Markdown through Pi's display-only transformer. Streaming content remains visible.
+- Restore active-branch fingerprints on session start. Switching between hide and show refreshes existing Assistant components without restarting Pi.
+- Pi's Markdown transformer exposes text but not message IDs. Fingerprints use the same leading/trailing whitespace trim Pi applies before rendering, so text blocks that differ only in surrounding whitespace share a display identity and can be hidden together. A transformer loaded before SLYE can prevent matching if it changes the Markdown first.
 
 ## Rewrite behavior
 
@@ -61,4 +65,4 @@ See the complete reviewed [benchmark results](doc-4%20-%20SLYE-benchmark-results
 - While rewriting, show `Rewriting AI-speak…`.
 - Escape cancels the secondary request without a warning.
 - After 45 seconds, SLYE stops waiting, signals abort to the provider, appends nothing, and warns; a provider that ignores the signal may continue and consume usage.
-- Any other provider, output, append, or unexpected processing failure leaves the original intact and warns at most once per extension session.
+- Any other provider, output, append, or unexpected processing failure leaves the original intact and visible, records no hidden fingerprint, and warns at most once per extension session.

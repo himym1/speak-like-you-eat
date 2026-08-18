@@ -1,15 +1,15 @@
 {
   "name": "speak-like-you-eat",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "A Pi extension for plain-language companion rewrites.",
   "author": "wtfzambo",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/wtfzambo/speak-like-you-eat.git"
+    "url": "git+https://github.com/himym1/speak-like-you-eat.git"
   },
-  "homepage": "https://github.com/wtfzambo/speak-like-you-eat#readme",
-  "bugs": "https://github.com/wtfzambo/speak-like-you-eat/issues",
+  "homepage": "https://github.com/himym1/speak-like-you-eat#readme",
+  "bugs": "https://github.com/himym1/speak-like-you-eat/issues",
   "publishConfig": {
     "access": "public"
   },
@@ -33,7 +33,7 @@
     "extensions": [
       "./src/index.ts"
     ],
-    "image": "https://raw.githubusercontent.com/wtfzambo/speak-like-you-eat/refs/heads/main/imgs/front.png"
+    "image": "https://raw.githubusercontent.com/himym1/speak-like-you-eat/refs/heads/main/imgs/front.png"
   },
   "scripts": {
     "format": "biome format --write .",

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { AgentEndEvent, SessionEntry } from "@earendil-works/pi-coding-agent";
+import { fingerprintMarkdown } from "../src/original-display.ts";
 import {
   MAXIMUM_CONTEXT_CHARACTERS,
   prepareRewriteRequest,
@@ -21,6 +22,7 @@ test("prepares the complete eligible final response at the 200-character prose b
 
   assert.deepEqual(result?.request.target, `${firstText}\n\n${secondText}`);
   assert.equal(result?.entryId, "assistant");
+  assert.deepEqual(result?.targetFingerprints, [fingerprintMarkdown(firstText), fingerprintMarkdown(secondText)]);
 });
 
 test("rejects a final response with 199 non-whitespace prose characters", () => {

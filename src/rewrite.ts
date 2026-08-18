@@ -1,4 +1,5 @@
 import type { AgentEndEvent, SessionEntry, SessionMessageEntry } from "@earendil-works/pi-coding-agent";
+import { fingerprintTextBlocks } from "./original-display.ts";
 
 const MINIMUM_PROSE_CHARACTERS = 200;
 export const MAXIMUM_CONTEXT_CHARACTERS = 8_000;
@@ -16,6 +17,7 @@ export type RewriteRequest = {
 export type PreparedRewriteRequest = {
   entryId: string;
   request: RewriteRequest;
+  targetFingerprints: string[];
 };
 
 type AgentMessage = AgentEndEvent["messages"][number];
@@ -37,6 +39,7 @@ export function prepareRewriteRequest(
 
   return {
     entryId: targetEntry.id,
+    targetFingerprints: fingerprintTextBlocks(target.content),
     request: {
       target: joinTextBlocks(target.content),
       context: buildPriorContext(branch, targetEntry.id),

@@ -21,9 +21,15 @@ import {
 import { completeModel, lowestSupportedThinkingLevel, type ThinkingLevel } from "./model-completion.ts";
 import { formatModelCandidate, pickModel, selectModelCandidates } from "./model-picker.ts";
 import { completeRewrite, type RewriteOutcome } from "./model-rewrite.ts";
+import {
+  createOriginalDisplayRuntime,
+  parseRewriteEntryData,
+  type RewriteEntryData,
+} from "./original-display-runtime.ts";
 import { prepareRewriteRequest } from "./rewrite.ts";
 
-const USAGE = "Usage: /slye model|on|off";
+const USAGE = "Usage: /slye model|on|off|original hide|show|status";
+const ORIGINAL_USAGE = "Usage: /slye original hide|show|status";
 const MODEL_SCOPE_ALL = "All projects";
 const MODEL_SCOPE_PROJECT = "This project only";
 const REWRITE_ENTRY_TYPE = "slye.rewrite";
@@ -36,12 +42,12 @@ type SlyePaths = {
 
 type PiModel = NonNullable<ReturnType<ExtensionContext["modelRegistry"]["find"]>>;
 type UsableModel = { model: PiModel; thinkingLevel: ThinkingLevel };
-type RewriteEntryData = { display: string };
 
 export default function speakLikeYouEat(pi: ExtensionAPI): void {
   let hasShownStartupWarning = false;
   let hasShownProcessingWarning = false;
   const processedTargetEntryIds = new Set<string>();
+  const originalDisplay = createOriginalDisplayRuntime(pi, REWRITE_ENTRY_TYPE);
 
   pi.registerEntryRenderer<RewriteEntryData>(REWRITE_ENTRY_TYPE, (entry, _options, theme) => {
     const data = parseRewriteEntryData(entry.data);
@@ -62,13 +68,17 @@ export default function speakLikeYouEat(pi: ExtensionAPI): void {
 
     const effectiveConfig = await loadConfig(ctx);
     if (effectiveConfig.kind === "unconfigured") {
+      await originalDisplay.restore(ctx.sessionManager.getBranch(), false, ctx);
       notifyStartupWarning(ctx, "SLYE is not configured. Run /slye model.");
       return;
     }
     if (effectiveConfig.kind === "invalid") {
+      await originalDisplay.restore(ctx.sessionManager.getBranch(), false, ctx);
       notifyStartupWarning(ctx, `SLYE configuration is invalid at ${effectiveConfig.path}. Fix it or run /slye model.`);
       return;
     }
+
+    await originalDisplay.restore(ctx.sessionManager.getBranch(), effectiveConfig.config.hideOriginal === true, ctx);
     if (!effectiveConfig.config.enabled) {
       return;
     }
@@ -117,7 +127,12 @@ export default function speakLikeYouEat(pi: ExtensionAPI): void {
         return;
       }
 
-      pi.appendEntry<RewriteEntryData>(REWRITE_ENTRY_TYPE, { display: outcome.display });
+      const entryData: RewriteEntryData = {
+        display: outcome.display,
+        targetFingerprints: prepared.targetFingerprints,
+      };
+      pi.appendEntry<RewriteEntryData>(REWRITE_ENTRY_TYPE, entryData);
+      await originalDisplay.record(prepared.targetFingerprints, ctx);
     } catch {
       notifyProcessingWarning(ctx);
     }
@@ -126,8 +141,15 @@ export default function speakLikeYouEat(pi: ExtensionAPI): void {
   pi.registerCommand("slye", {
     description: "Configure Speak like you eat",
     getArgumentCompletions: (prefix) => {
-      const commands = ["model", "on", "off"];
-      const matches = commands.filter((command) => command.startsWith(prefix));
+      const trimmed = prefix.trimStart();
+      if (trimmed === "original" || trimmed.startsWith("original ")) {
+        const value = trimmed.startsWith("original ") ? trimmed.slice("original ".length) : "";
+        const actions = ["hide", "show", "status"].filter((action) => action.startsWith(value));
+        return actions.length === 0 ? null : actions.map((action) => ({ value: `original ${action}`, label: action }));
+      }
+
+      const commands = ["model", "on", "off", "original"];
+      const matches = commands.filter((command) => command.startsWith(trimmed));
       return matches.length === 0 ? null : matches.map((value) => ({ value, label: value }));
     },
     handler: async (args, ctx) => {
@@ -135,7 +157,7 @@ export default function speakLikeYouEat(pi: ExtensionAPI): void {
         return;
       }
 
-      const command = args.trim();
+      const [command, action] = args.trim().split(/\s+/);
       if (command === "model") {
         await chooseAndSaveModel(ctx);
         return;
@@ -146,6 +168,10 @@ export default function speakLikeYouEat(pi: ExtensionAPI): void {
       }
       if (command === "on") {
         await turnOn(ctx);
+        return;
+      }
+      if (command === "original") {
+        await updateOriginalDisplay(ctx, action ?? "", (hidden) => originalDisplay.setHidden(hidden, ctx));
         return;
       }
 
@@ -197,14 +223,24 @@ async function chooseAndSaveModel(ctx: ExtensionCommandContext): Promise<void> {
     return;
   }
 
+  const effectiveConfig = await loadConfig(ctx);
+  const hideOriginal = effectiveConfig.kind === "valid" ? effectiveConfig.config.hideOriginal : undefined;
   const config: SlyeConfig = {
     enabled: true,
+    ...(hideOriginal === undefined ? {} : { hideOriginal }),
     model: { provider: selected.provider, id: selected.id },
   };
   const paths = getConfigPaths(ctx);
 
   if (selectedScope === MODEL_SCOPE_PROJECT) {
-    await saveEnabledConfig(ctx, paths.project, config.model, MODEL_SCOPE_PROJECT, selected.thinkingLevel);
+    await saveEnabledConfig(
+      ctx,
+      paths.project,
+      config.model,
+      MODEL_SCOPE_PROJECT,
+      selected.thinkingLevel,
+      config.hideOriginal,
+    );
     return;
   }
 
@@ -264,8 +300,12 @@ async function turnOff(ctx: ExtensionCommandContext): Promise<void> {
     return;
   }
   const path = effectiveConfig.kind === "valid" ? effectiveConfig.path : getConfigPaths(ctx).global;
-  const model = effectiveConfig.kind === "valid" ? effectiveConfig.config.model : undefined;
-  const config: SlyeConfig = model === undefined ? { enabled: false } : { enabled: false, model };
+  const existing = effectiveConfig.kind === "valid" ? effectiveConfig.config : undefined;
+  const display = existing?.hideOriginal === undefined ? {} : { hideOriginal: existing.hideOriginal };
+  const config: SlyeConfig =
+    existing?.model === undefined
+      ? { enabled: false, ...display }
+      : { enabled: false, ...display, model: existing.model };
 
   try {
     await writeConfigAtomically(path, config);
@@ -288,7 +328,14 @@ async function turnOn(ctx: ExtensionCommandContext): Promise<void> {
     const usableModel = resolveUsableModel(ctx, model);
     if (usableModel !== undefined) {
       const scope = effectiveConfig.scope === "project" ? MODEL_SCOPE_PROJECT : MODEL_SCOPE_ALL;
-      await saveEnabledConfig(ctx, effectiveConfig.path, model, scope, usableModel.thinkingLevel);
+      await saveEnabledConfig(
+        ctx,
+        effectiveConfig.path,
+        model,
+        scope,
+        usableModel.thinkingLevel,
+        effectiveConfig.config.hideOriginal,
+      );
       return;
     }
   }
@@ -302,9 +349,14 @@ async function saveEnabledConfig(
   model: ModelReference,
   scope: string,
   thinkingLevel: ThinkingLevel,
+  hideOriginal?: boolean,
 ): Promise<void> {
   try {
-    await writeConfigAtomically(path, { enabled: true, model });
+    await writeConfigAtomically(path, {
+      enabled: true,
+      ...(hideOriginal === undefined ? {} : { hideOriginal }),
+      model,
+    });
   } catch {
     ctx.ui.notify("Could not save SLYE configuration.", "warning");
     return;
@@ -313,15 +365,41 @@ async function saveEnabledConfig(
   ctx.ui.notify(`SLYE enabled with ${formatModelCandidate({ ...model, thinkingLevel })} for ${scope}.`, "info");
 }
 
-function parseRewriteEntryData(data: unknown): RewriteEntryData | undefined {
-  if (typeof data !== "object" || data === null || Array.isArray(data)) {
-    return undefined;
-  }
-  if (!("display" in data) || typeof data.display !== "string") {
-    return undefined;
+async function updateOriginalDisplay(
+  ctx: ExtensionCommandContext,
+  action: string,
+  onChanged: (hidden: boolean) => Promise<void>,
+): Promise<void> {
+  if (action !== "hide" && action !== "show" && action !== "status") {
+    ctx.ui.notify(ORIGINAL_USAGE, "info");
+    return;
   }
 
-  return { display: data.display };
+  const effectiveConfig = await loadConfig(ctx);
+  if (effectiveConfig.kind === "invalid") {
+    ctx.ui.notify(`SLYE configuration is invalid at ${effectiveConfig.path}. It was not changed.`, "warning");
+    return;
+  }
+
+  const currentlyHidden = effectiveConfig.kind === "valid" && effectiveConfig.config.hideOriginal === true;
+  if (action === "status") {
+    ctx.ui.notify(`Original responses are ${currentlyHidden ? "hidden" : "shown"}.`, "info");
+    return;
+  }
+
+  const hidden = action === "hide";
+  const path = effectiveConfig.kind === "valid" ? effectiveConfig.path : getConfigPaths(ctx).global;
+  const current: SlyeConfig = effectiveConfig.kind === "valid" ? effectiveConfig.config : { enabled: false };
+
+  try {
+    await writeConfigAtomically(path, { ...current, hideOriginal: hidden });
+  } catch {
+    ctx.ui.notify("Could not save SLYE configuration.", "warning");
+    return;
+  }
+
+  await onChanged(hidden);
+  ctx.ui.notify(`Original responses are now ${hidden ? "hidden" : "shown"}.`, "info");
 }
 
 async function loadConfig(ctx: ExtensionContext): Promise<EffectiveConfig> {

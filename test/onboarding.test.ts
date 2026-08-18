@@ -48,6 +48,9 @@ function createExtension(): {
     registerEntryRenderer() {
       // The display renderer is exercised in display.test.ts.
     },
+    registerMarkdownTransformer() {
+      // Display behavior is exercised in display.test.ts.
+    },
   } as unknown as ExtensionAPI;
 
   speakLikeYouEat(api);
@@ -92,6 +95,11 @@ function createContext(options: {
     mode: options.mode ?? "tui",
     cwd: options.cwd,
     scopedModels: options.scopedModels ?? [],
+    sessionManager: {
+      getBranch() {
+        return [];
+      },
+    },
     modelRegistry: registry,
     isProjectTrusted: () => options.trusted ?? false,
     ui: {
@@ -108,6 +116,9 @@ function createContext(options: {
       async confirm(title: string, message: string): Promise<boolean> {
         confirmationMessages.push({ title, message });
         return confirmAnswers.shift() ?? false;
+      },
+      setHiddenThinkingLabel() {
+        // Transcript refresh is exercised in display.test.ts.
       },
     },
   } as unknown as ExtensionCommandContext;
@@ -159,9 +170,12 @@ test("/slye model writes the selected trusted project configuration", async (t) 
   t.after(() => rm(directory, { recursive: true, force: true }));
 
   const chosen = model("openai", "gpt-5");
+  const projectDirectory = join(directory, "project");
+  const path = join(projectDirectory, CONFIG_DIR_NAME, "slye.json");
+  await writeConfigAtomically(path, { enabled: false, hideOriginal: true });
   const extension = createExtension();
   const { context, notifications } = createContext({
-    cwd: join(directory, "project"),
+    cwd: projectDirectory,
     trusted: true,
     models: [],
     scopedModels: [{ model: chosen, thinkingLevel: "high" }],
@@ -169,11 +183,10 @@ test("/slye model writes the selected trusted project configuration", async (t) 
   });
   await extension.command.handler("model", context);
 
-  const path = join(directory, "project", CONFIG_DIR_NAME, "slye.json");
   assert.deepEqual(await readConfig(path), {
     kind: "valid",
     path,
-    config: { enabled: true, model: { provider: "openai", id: "gpt-5" } },
+    config: { enabled: true, hideOriginal: true, model: { provider: "openai", id: "gpt-5" } },
   });
   assert.deepEqual(notifications, [
     { message: "SLYE enabled with openai / gpt-5 · thinking: off for This project only.", type: "info" },
@@ -353,7 +366,7 @@ test("/slye off updates only the trusted project configuration that takes preced
   const globalConfig = { enabled: true, model: { provider: "global", id: "model" } } as const;
   const projectModel = { provider: "project", id: "model" } as const;
   await writeConfigAtomically(globalPath, globalConfig);
-  await writeConfigAtomically(projectPath, { enabled: true, model: projectModel });
+  await writeConfigAtomically(projectPath, { enabled: true, hideOriginal: true, model: projectModel });
   const globalContents = await readFile(globalPath, "utf8");
 
   const extension = createExtension();
@@ -363,7 +376,7 @@ test("/slye off updates only the trusted project configuration that takes preced
   assert.deepEqual(await readConfig(projectPath), {
     kind: "valid",
     path: projectPath,
-    config: { enabled: false, model: projectModel },
+    config: { enabled: false, hideOriginal: true, model: projectModel },
   });
   assert.equal(await readFile(globalPath, "utf8"), globalContents);
   assert.deepEqual(notifications, [{ message: "SLYE is off.", type: "info" }]);
@@ -385,7 +398,7 @@ test("/slye on restores a usable trusted project model without opening a picker"
   const projectPath = join(projectDirectory, CONFIG_DIR_NAME, CONFIG_FILENAME);
   const projectModel = { provider: "project", id: "model" } as const;
   await writeConfigAtomically(globalPath, { enabled: false, model: { provider: "global", id: "model" } });
-  await writeConfigAtomically(projectPath, { enabled: false, model: projectModel });
+  await writeConfigAtomically(projectPath, { enabled: false, hideOriginal: true, model: projectModel });
   const globalContents = await readFile(globalPath, "utf8");
 
   const extension = createExtension();
@@ -406,7 +419,7 @@ test("/slye on restores a usable trusted project model without opening a picker"
   assert.deepEqual(await readConfig(projectPath), {
     kind: "valid",
     path: projectPath,
-    config: { enabled: true, model: projectModel },
+    config: { enabled: true, hideOriginal: true, model: projectModel },
   });
   assert.equal(await readFile(globalPath, "utf8"), globalContents);
   assert.deepEqual(notifications, [

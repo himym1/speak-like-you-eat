@@ -12,10 +12,12 @@ export type ModelReference = {
 export type SlyeConfig =
   | {
       enabled: false;
+      hideOriginal?: boolean;
       model?: ModelReference;
     }
   | {
       enabled: true;
+      hideOriginal?: boolean;
       model: ModelReference;
     };
 
@@ -35,11 +37,14 @@ export function parseConfig(value: unknown): SlyeConfig | undefined {
   }
 
   const keys = Object.keys(value);
-  if (keys.some((key) => key !== "enabled" && key !== "model")) {
+  if (keys.some((key) => key !== "enabled" && key !== "hideOriginal" && key !== "model")) {
     return undefined;
   }
 
   if (typeof value.enabled !== "boolean") {
+    return undefined;
+  }
+  if (value.hideOriginal !== undefined && typeof value.hideOriginal !== "boolean") {
     return undefined;
   }
 
@@ -48,11 +53,12 @@ export function parseConfig(value: unknown): SlyeConfig | undefined {
     return undefined;
   }
 
+  const display = value.hideOriginal === undefined ? {} : { hideOriginal: value.hideOriginal };
   if (value.enabled) {
-    return model === undefined ? undefined : { enabled: true, model };
+    return model === undefined ? undefined : { enabled: true, ...display, model };
   }
 
-  return model === undefined ? { enabled: false } : { enabled: false, model };
+  return model === undefined ? { enabled: false, ...display } : { enabled: false, ...display, model };
 }
 
 export async function readConfig(path: string): Promise<ConfigReadResult> {

@@ -12,30 +12,55 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import { writeConfigAtomically } from "../src/config.ts";
 import speakLikeYouEat from "../src/index.ts";
+import { fingerprintMarkdown } from "../src/original-display.ts";
 
 type AgentMessage = AgentEndEvent["messages"][number];
 type AgentEndHandler = (event: AgentEndEvent, ctx: ExtensionContext) => Promise<void>;
+type SessionStartHandler = (
+  event: { type: "session_start"; reason: "startup" },
+  ctx: ExtensionContext,
+) => Promise<void>;
+type MarkdownTransformer = Parameters<ExtensionAPI["registerMarkdownTransformer"]>[0];
+type SlyeCommand = {
+  getArgumentCompletions?: (prefix: string) => Array<{ value: string; label: string }> | null;
+  handler: (args: string, ctx: ExtensionContext) => Promise<void>;
+};
 type Notification = { message: string; type: "info" | "warning" | "error" | undefined };
 type AppendedEntry = { customType: string; data: unknown };
 type Completion = (model: unknown, context: unknown, options: { signal: AbortSignal }) => Promise<unknown>;
 
 function createExtension(options: { appendThrows?: boolean } = {}): {
-  endAgent: (event: AgentEndEvent, ctx: ExtensionContext) => Promise<void>;
   appendedEntries: AppendedEntry[];
+  completions: (prefix: string) => Array<{ value: string; label: string }> | null;
+  endAgent: (event: AgentEndEvent, ctx: ExtensionContext) => Promise<void>;
   renderer: EntryRenderer | undefined;
+  runCommand: (args: string, ctx: ExtensionContext) => Promise<void>;
   sendMessageCalls: number;
+  startSession: (ctx: ExtensionContext) => Promise<void>;
+  transform: MarkdownTransformer;
 } {
   let agentEndHandler: AgentEndHandler | undefined;
+  let sessionStartHandler: SessionStartHandler | undefined;
+  let command: SlyeCommand | undefined;
+  let markdownTransformer: MarkdownTransformer | undefined;
   let renderer: EntryRenderer | undefined;
-  const appendedEntries: AppendedEntry[] = [];
+  const appendEntries: AppendedEntry[] = [];
   let sendMessageCalls = 0;
   const api = {
     on(event: string, handler: unknown) {
       if (event === "agent_end") {
         agentEndHandler = handler as AgentEndHandler;
       }
+      if (event === "session_start") {
+        sessionStartHandler = handler as SessionStartHandler;
+      }
     },
-    registerCommand() {},
+    registerCommand(_name: string, registeredCommand: SlyeCommand) {
+      command = registeredCommand;
+    },
+    registerMarkdownTransformer(registeredTransformer: MarkdownTransformer) {
+      markdownTransformer = registeredTransformer;
+    },
     registerEntryRenderer(_type: string, registeredRenderer: EntryRenderer) {
       renderer = registeredRenderer;
     },
@@ -43,7 +68,7 @@ function createExtension(options: { appendThrows?: boolean } = {}): {
       if (options.appendThrows) {
         throw new Error("cannot append");
       }
-      appendedEntries.push({ customType, data });
+      appendEntries.push({ customType, data });
     },
     sendMessage() {
       sendMessageCalls += 1;
@@ -51,17 +76,25 @@ function createExtension(options: { appendThrows?: boolean } = {}): {
   } as unknown as ExtensionAPI;
 
   speakLikeYouEat(api);
-  if (agentEndHandler === undefined) {
-    throw new Error("SLYE did not register its agent-end handler");
+  if (agentEndHandler === undefined || sessionStartHandler === undefined || command === undefined) {
+    throw new Error("SLYE did not register its lifecycle handlers and command");
+  }
+  if (markdownTransformer === undefined) {
+    throw new Error("SLYE did not register its Markdown transformer");
   }
 
   return {
+    appendedEntries: appendEntries,
+    completions: (prefix) => command?.getArgumentCompletions?.(prefix) ?? null,
     endAgent: agentEndHandler,
-    appendedEntries,
     renderer,
+    runCommand: command.handler,
     get sendMessageCalls() {
       return sendMessageCalls;
     },
+    startSession: (ctx) =>
+      sessionStartHandler?.({ type: "session_start", reason: "startup" }, ctx) ?? Promise.resolve(),
+    transform: markdownTransformer,
   };
 }
 
@@ -80,11 +113,13 @@ function createContext(options: {
   workingMessages: Array<string | undefined>;
   completionCalls: number;
   findCalls: number;
+  assistantRefreshes: number;
 } {
   const notifications: Notification[] = [];
   const workingMessages: Array<string | undefined> = [];
   let completionCalls = 0;
   let findCalls = 0;
+  let assistantRefreshes = 0;
   const model = {
     provider: "test",
     id: "model",
@@ -105,6 +140,19 @@ function createContext(options: {
       },
       setWorkingMessage(message?: string) {
         workingMessages.push(message);
+      },
+      setWidget(_key: string, content: unknown) {
+        if (typeof content === "function") {
+          content(
+            {
+              invalidate() {
+                assistantRefreshes += 1;
+              },
+              requestRender() {},
+            } as never,
+            {} as never,
+          );
+        }
       },
     },
     sessionManager: {
@@ -145,6 +193,9 @@ function createContext(options: {
     context,
     notifications,
     workingMessages,
+    get assistantRefreshes() {
+      return assistantRefreshes;
+    },
     get completionCalls() {
       return completionCalls;
     },
@@ -177,7 +228,10 @@ test("calls the configured authenticated model once with an isolated exact rewri
 
   assert.equal(extension.appendedEntries.length, 1);
   assert.equal(extension.appendedEntries[0]?.customType, "slye.rewrite");
-  assert.deepEqual(extension.appendedEntries[0]?.data, { display: "Prima parte.\n\nSeconda parte." });
+  assert.deepEqual(extension.appendedEntries[0]?.data, {
+    display: "Prima parte.\n\nSeconda parte.",
+    targetFingerprints: [fingerprintMarkdown(firstTargetBlock), fingerprintMarkdown(secondTargetBlock)],
+  });
   assert.equal(extension.sendMessageCalls, 0);
   assert.equal(testContext.completionCalls, 1);
   assert.equal(testContext.findCalls, 1);
@@ -397,6 +451,105 @@ test("an unexpected processing failure leaves the original alone and warns once"
   assert.deepEqual(testContext.notifications, [{ message: "SLYE could not create a rewrite.", type: "warning" }]);
 });
 
+test("hides a successful original only after the rewrite entry is appended", async (t) => {
+  const directory = await setupConfiguredDirectory(t, true, true);
+  const targetText = "verbose response ".repeat(20);
+  const target = longAssistant([text(targetText)]);
+  const branch = [entry("user", user("please explain")), entry("target", target)];
+  const extension = createExtension();
+  const testContext = createContext({ cwd: directory, branch });
+
+  await extension.startSession(testContext.context);
+  assert.equal(
+    extension.transform(targetText, { messageType: "assistant", isStreaming: false, availableWidth: 80 }),
+    targetText,
+  );
+
+  await extension.endAgent({ type: "agent_end", messages: [target] } as AgentEndEvent, testContext.context);
+
+  assert.equal(
+    extension.transform(targetText, { messageType: "assistant", isStreaming: false, availableWidth: 80 }),
+    "",
+  );
+  assert.equal(
+    extension.transform(targetText, { messageType: "assistant", isStreaming: true, availableWidth: 80 }),
+    targetText,
+  );
+  assert.equal(testContext.assistantRefreshes, 1);
+  assert.equal((branch[1] as { message: AgentMessage }).message, target);
+});
+
+test("keeps a hidden-mode original visible when appending the rewrite fails", async (t) => {
+  const directory = await setupConfiguredDirectory(t, true, true);
+  const targetText = "verbose response ".repeat(20);
+  const target = longAssistant([text(targetText)]);
+  const branch = [entry("user", user("please explain")), entry("target", target)];
+  const extension = createExtension({ appendThrows: true });
+  const testContext = createContext({ cwd: directory, branch });
+
+  await extension.startSession(testContext.context);
+  await extension.endAgent({ type: "agent_end", messages: [target] } as AgentEndEvent, testContext.context);
+
+  assert.equal(
+    extension.transform(targetText, { messageType: "assistant", isStreaming: false, availableWidth: 80 }),
+    targetText,
+  );
+  assert.equal(testContext.assistantRefreshes, 0);
+});
+
+test("restores hidden originals and toggles their display without restarting", async (t) => {
+  const directory = await setupConfiguredDirectory(t, true, true);
+  const targetText = "restored response ".repeat(20);
+  const fingerprint = fingerprintMarkdown(targetText);
+  const branch = [
+    entry("target", longAssistant([text(targetText)])),
+    rewriteEntry("rewrite", { display: "Restored plain response", targetFingerprints: [fingerprint] }),
+  ];
+  const extension = createExtension();
+  const testContext = createContext({ cwd: directory, branch });
+
+  await extension.startSession(testContext.context);
+  assert.equal(
+    extension.transform(targetText, { messageType: "assistant", isStreaming: false, availableWidth: 80 }),
+    "",
+  );
+  assert.equal(testContext.assistantRefreshes, 1);
+
+  await extension.runCommand("original show", testContext.context);
+  assert.equal(
+    extension.transform(targetText, { messageType: "assistant", isStreaming: false, availableWidth: 80 }),
+    targetText,
+  );
+  assert.equal(testContext.assistantRefreshes, 2);
+  assert.equal(
+    JSON.parse(await readFile(join(process.env.PI_CODING_AGENT_DIR ?? "", "slye.json"), "utf8")).hideOriginal,
+    false,
+  );
+
+  await extension.runCommand("original status", testContext.context);
+  assert.deepEqual(testContext.notifications.slice(-2), [
+    { message: "Original responses are now shown.", type: "info" },
+    { message: "Original responses are shown.", type: "info" },
+  ]);
+
+  await extension.runCommand("original hide", testContext.context);
+  assert.equal(
+    extension.transform(targetText, { messageType: "assistant", isStreaming: false, availableWidth: 80 }),
+    "",
+  );
+  assert.equal(testContext.assistantRefreshes, 3);
+  assert.equal(
+    JSON.parse(await readFile(join(process.env.PI_CODING_AGENT_DIR ?? "", "slye.json"), "utf8")).hideOriginal,
+    true,
+  );
+  await extension.runCommand("original status", testContext.context);
+  assert.deepEqual(testContext.notifications.slice(-2), [
+    { message: "Original responses are now hidden.", type: "info" },
+    { message: "Original responses are hidden.", type: "info" },
+  ]);
+  assert.deepEqual(extension.completions("original h"), [{ value: "original hide", label: "hide" }]);
+});
+
 test("registers a safe persistent entry renderer", () => {
   const extension = createExtension();
   if (extension.renderer === undefined) {
@@ -428,7 +581,11 @@ test("registers a safe persistent entry renderer", () => {
   );
 });
 
-async function setupConfiguredDirectory(t: test.TestContext, enabled: boolean): Promise<string> {
+async function setupConfiguredDirectory(
+  t: test.TestContext,
+  enabled: boolean,
+  hideOriginal?: boolean,
+): Promise<string> {
   const directory = await mkdtemp(join(tmpdir(), "slye-display-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
@@ -436,6 +593,7 @@ async function setupConfiguredDirectory(t: test.TestContext, enabled: boolean): 
   t.after(() => restoreEnvironment("PI_CODING_AGENT_DIR", previousAgentDir));
   await writeConfigAtomically(join(directory, "agent", "slye.json"), {
     enabled,
+    ...(hideOriginal === undefined ? {} : { hideOriginal }),
     model: { provider: "test", id: "model" },
   });
   return join(directory, "project");
@@ -461,6 +619,17 @@ function user(content: string): AgentMessage {
 
 function entry(id: string, message: AgentMessage): SessionEntry {
   return { type: "message", id, parentId: null, timestamp: "now", message } as SessionEntry;
+}
+
+function rewriteEntry(id: string, data: unknown): SessionEntry {
+  return {
+    type: "custom",
+    id,
+    parentId: null,
+    timestamp: "now",
+    customType: "slye.rewrite",
+    data,
+  } as SessionEntry;
 }
 
 function restoreEnvironment(name: string, value: string | undefined): void {
