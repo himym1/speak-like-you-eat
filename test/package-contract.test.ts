@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 import { promisify } from "node:util";
+import { parse } from "yaml";
 
 const README_LINKED_DOCUMENTS = [
   "backlog/docs/specs/doc-1 - SLYE-MVP-specification.md",
@@ -115,4 +116,15 @@ test("the package manifest declares public release metadata, its extension, gove
 
   const extension = await import(new URL(extensionPath, packageUrl).href);
   assert.equal(typeof extension.default, "function");
+});
+
+test("release workflows are disabled outside the upstream repository", async () => {
+  for (const [workflow, job] of [
+    ["release.yml", "release-please"],
+    ["publish.yml", "publish"],
+  ] as const) {
+    const contents = await readFile(new URL(`../.github/workflows/${workflow}`, import.meta.url), "utf8");
+    const parsed = parse(contents) as { jobs?: Record<string, { if?: unknown }> };
+    assert.equal(parsed.jobs?.[job]?.if, "github.repository == 'wtfzambo/speak-like-you-eat'");
+  }
 });

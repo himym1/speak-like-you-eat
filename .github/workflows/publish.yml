@@ -21,6 +21,7 @@ concurrency:
 
 jobs:
   publish:
+    if: github.repository == 'wtfzambo/speak-like-you-eat'
     runs-on: ubuntu-latest
     steps:
       - id: tag

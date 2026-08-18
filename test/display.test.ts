@@ -12,6 +12,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import { writeConfigAtomically } from "../src/config.ts";
 import speakLikeYouEat from "../src/index.ts";
+import { REWRITE_TIMEOUT_MS } from "../src/model-rewrite.ts";
 import { fingerprintMarkdown } from "../src/original-display.ts";
 
 type AgentMessage = AgentEndEvent["messages"][number];
@@ -348,8 +349,9 @@ test("processes a duplicate target event only once", async (t) => {
 });
 
 test("cancels a running secondary request silently and restores the working message", async (t) => {
-  const directory = await setupConfiguredDirectory(t, true);
-  const target = longAssistant();
+  const directory = await setupConfiguredDirectory(t, true, true);
+  const targetText = "complete response ".repeat(20);
+  const target = longAssistant([text(targetText)]);
   const branch = [entry("user", user("please explain")), entry("target", target)];
   const userController = new AbortController();
   let requestSignal: AbortSignal | undefined;
@@ -369,6 +371,7 @@ test("cancels a running secondary request silently and restores the working mess
     },
   });
 
+  await extension.startSession(context);
   const completed = extension.endAgent({ type: "agent_end", messages: [target] } as AgentEndEvent, context);
   await started;
   userController.abort();
@@ -378,12 +381,52 @@ test("cancels a running secondary request silently and restores the working mess
   assert.deepEqual(extension.appendedEntries, []);
   assert.deepEqual(notifications, []);
   assert.deepEqual(workingMessages, ["Rewriting AI-speak…", undefined]);
+  assert.equal(
+    extension.transform(targetText, { messageType: "assistant", isStreaming: false, availableWidth: 80 }),
+    targetText,
+  );
+});
+
+test("keeps a hidden-mode original visible at the exact rewrite timeout", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const directory = await setupConfiguredDirectory(t, true, true);
+  const targetText = "complete response ".repeat(20);
+  const target = longAssistant([text(targetText)]);
+  const branch = [entry("user", user("please explain")), entry("target", target)];
+  let resolveStarted: (() => void) | undefined;
+  const started = new Promise<void>((resolve) => {
+    resolveStarted = resolve;
+  });
+  const extension = createExtension();
+  const testContext = createContext({
+    cwd: directory,
+    branch,
+    complete() {
+      resolveStarted?.();
+      return new Promise(() => undefined);
+    },
+  });
+
+  await extension.startSession(testContext.context);
+  const completed = extension.endAgent({ type: "agent_end", messages: [target] } as AgentEndEvent, testContext.context);
+  await started;
+  t.mock.timers.tick(REWRITE_TIMEOUT_MS);
+  await completed;
+
+  assert.equal(
+    extension.transform(targetText, { messageType: "assistant", isStreaming: false, availableWidth: 80 }),
+    targetText,
+  );
+  assert.deepEqual(extension.appendedEntries, []);
+  assert.equal(testContext.assistantRefreshes, 0);
+  assert.deepEqual(testContext.notifications, [{ message: "SLYE could not create a rewrite.", type: "warning" }]);
 });
 
 test("provider, non-stop, and empty failures leave the original alone and warn once", async (t) => {
-  const directory = await setupConfiguredDirectory(t, true);
+  const directory = await setupConfiguredDirectory(t, true, true);
   const extension = createExtension();
-  const providerTarget = longAssistant();
+  const providerText = "provider response ".repeat(20);
+  const providerTarget = longAssistant([text(providerText)]);
   const providerFailure = createContext({
     cwd: directory,
     branch: [entry("user", user("please explain")), entry("provider", providerTarget)],
@@ -391,7 +434,8 @@ test("provider, non-stop, and empty failures leave the original alone and warn o
       throw new Error("provider failed");
     },
   });
-  const nonStopTarget = longAssistant();
+  const nonStopText = "non-stop response ".repeat(20);
+  const nonStopTarget = longAssistant([text(nonStopText)]);
   const nonStopFailure = createContext({
     cwd: directory,
     branch: [entry("user", user("please explain")), entry("non-stop", nonStopTarget)],
@@ -399,7 +443,8 @@ test("provider, non-stop, and empty failures leave the original alone and warn o
       return response("length", [text("incomplete")]);
     },
   });
-  const emptyTarget = longAssistant();
+  const emptyText = "empty response ".repeat(20);
+  const emptyTarget = longAssistant([text(emptyText)]);
   const emptyFailure = createContext({
     cwd: directory,
     branch: [entry("user", user("please explain")), entry("empty", emptyTarget)],
@@ -408,6 +453,7 @@ test("provider, non-stop, and empty failures leave the original alone and warn o
     },
   });
 
+  await extension.startSession(providerFailure.context);
   await extension.endAgent({ type: "agent_end", messages: [providerTarget] } as AgentEndEvent, providerFailure.context);
   await extension.endAgent({ type: "agent_end", messages: [nonStopTarget] } as AgentEndEvent, nonStopFailure.context);
   await extension.endAgent({ type: "agent_end", messages: [emptyTarget] } as AgentEndEvent, emptyFailure.context);
@@ -416,6 +462,13 @@ test("provider, non-stop, and empty failures leave the original alone and warn o
   assert.deepEqual(providerFailure.notifications, [{ message: "SLYE could not create a rewrite.", type: "warning" }]);
   assert.deepEqual(nonStopFailure.notifications, []);
   assert.deepEqual(emptyFailure.notifications, []);
+  for (const original of [providerText, nonStopText, emptyText]) {
+    assert.equal(
+      extension.transform(original, { messageType: "assistant", isStreaming: false, availableWidth: 80 }),
+      original,
+    );
+  }
+  assert.equal(providerFailure.assistantRefreshes, 0);
 });
 
 test("an append failure leaves the original alone and warns", async (t) => {

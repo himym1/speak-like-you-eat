@@ -1,11 +1,11 @@
 ---
 id: TASK-2
 title: Session pickup — zambo
-status: To Do
+status: Done
 assignee:
   - '@zambo'
 created_date: '2026-08-13 23:04'
-updated_date: '2026-08-17 00:48'
+updated_date: '2026-08-18 08:26'
 labels:
   - continuity
   - handoff
@@ -18,6 +18,9 @@ ordinal: 2000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
+HISTORICAL SNAPSHOT
+This task records the completed 2026-08-17 upstream v1.0.1 handoff. It is not the current branch or verification authority. Current hide-original fork work and evidence are tracked in TASK-10; use its final summary and current repository state instead of the commands below.
+
 WHERE WE LEFT OFF
 2026-08-17. Branch `main` completed the target-language fix and 1.0.1 release at commit `e4b62eb`, pushed to `origin/main`; this pickup update is the only later metadata commit. The tree is clean after this handoff commit. TASK-9 is Done. Production now tells the rewrite model to preserve the Target response's original or intentional language mix and never translate; prior context is topic-only. No detector, retry, extra request, language block, or context-selection change was added. Release Please PR #2 merged as `4f067fe`, creating stable `v1.0.1`; GitHub Release `https://github.com/wtfzambo/speak-like-you-eat/releases/tag/v1.0.1` and npm `speak-like-you-eat@1.0.1` are Latest. OIDC publish run `31982999501` passed with SLSA provenance, exactly 12 files, and a clean Pi install. Historical benchmark prompts/manifests/fingerprints remain immutable; the production language hardening is explicitly unbenchmarked. TASK-7 remains To Do with the six paused SLYE Markdown design questions.
 

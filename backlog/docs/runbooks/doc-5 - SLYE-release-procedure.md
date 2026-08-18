@@ -3,13 +3,17 @@ id: doc-5
 title: SLYE release procedure
 type: guide
 created_date: '2026-08-15 17:48'
-updated_date: '2026-08-15 17:54'
+updated_date: '2026-08-18 08:11'
 ---
 # SLYE release procedure
 
+## Repository scope
+
+This procedure applies only to the upstream `wtfzambo/speak-like-you-eat` repository and its npm trusted publisher. Both release jobs are guarded by `github.repository == 'wtfzambo/speak-like-you-eat'`, so pushes, dispatches, and releases in the `himym1` fork skip Release Please and npm publication. The fork is installed from Git; its validation ends with tests, package dry-runs, and Git-install smoke checks.
+
 ## Release policy
 
-Release Please reads Conventional Commits on `main`. Use `fix:` for a patch release and `feat:` for a minor release normally. With `bump-minor-pre-major: true`, a breaking change before 1.0 bumps the minor version rather than jumping to 1.0.0. Use `feat!:` or a `BREAKING CHANGE:` footer only for a breaking change. This project makes stable releases only: no prerelease versions and no alternate npm channel.
+Release Please reads Conventional Commits on upstream `main`. Use `fix:` for a patch release and `feat:` for a minor release normally. With `bump-minor-pre-major: true`, a breaking change before 1.0 bumps the minor version rather than jumping to 1.0.0. Use `feat!:` or a `BREAKING CHANGE:` footer only for a breaking change. This project makes stable releases only: no prerelease versions and no alternate npm channel.
 
 A releasable commit causes Release Please to open or update a release PR. Merge that PR to create the stable `vX.Y.Z` tag and GitHub Release. Only a created release sends the repository dispatch event, which starts `publish.yml` at that exact tag and publishes it to npm as `latest`. Creating or updating a release PR does not publish anything.
 
